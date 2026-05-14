@@ -1,6 +1,6 @@
 # M365 Copilot — HR Concierge Declarative Agent
 
-This folder contains the **Microsoft 365 Copilot** declarative agent manifest for the HR Concierge. It lets employees interact with the same multi-agent orchestration backend directly inside Microsoft 365 Copilot.
+This folder contains the **Microsoft 365 Copilot** declarative agent manifest for the HR Concierge. It lets employees interact with the same agentic orchestration backend directly inside Microsoft 365 Copilot.
 
 ## Structure
 
@@ -41,7 +41,7 @@ appPackage/
 
 ## How It Works
 
-The declarative agent connects M365 Copilot to the same FastAPI backend used by the standalone web app. Copilot sends user messages to the `/api/scenarios` and orchestration endpoints defined in `openapi.yaml`. The backend processes them through the multi-agent pipeline and returns structured responses.
+The declarative agent connects M365 Copilot to the same FastAPI backend used by the standalone web app. Copilot sends user messages to the `/api/scenarios` and orchestration endpoints defined in `openapi.yaml`. The backend processes them through the agentic tool pipeline and returns structured responses.
 
 **Key difference from standalone app**: The M365 Copilot surface uses the standard Copilot UX (cards, citations, adaptive cards) rather than the custom AG-UI adaptive renderer. The agent's instructions in `declarativeAgent.json` guide Copilot to present results appropriately.
 

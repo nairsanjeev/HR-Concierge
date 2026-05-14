@@ -1,6 +1,6 @@
 # Copilot Studio + M365 Chat Deployment Guide
 
-> End-to-end guide to connecting the HR Concierge MCP Server to Copilot Studio, creating a multi-agent app with additional agents, and deploying it to M365 Chat.
+> End-to-end guide to connecting the HR Concierge MCP Server to Copilot Studio, creating an agentic app with additional agents, and deploying it to M365 Chat.
 
 ---
 
@@ -54,8 +54,8 @@
 | **Microsoft 365 Copilot license** | E3/E5 + Copilot add-on, or M365 Copilot standalone |
 | **Copilot Studio license** | Included with M365 Copilot or standalone Copilot Studio license |
 | **Admin consent** | Global Admin or Teams Admin to approve the app for your tenant |
-| **MCP Server deployed** | `https://hr-concierge-mcp.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io` |
-| **Backend API deployed** | `https://hr-concierge-api.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io` |
+| **MCP Server deployed** | `https://<your-mcp-app>.azurecontainerapps.io` |
+| **Backend API deployed** | `https://<your-api-app>.azurecontainerapps.io` |
 | **Node.js 20+** | For local development with M365 Agents Toolkit |
 | **VS Code** | With M365 Agents Toolkit extension installed |
 
@@ -107,7 +107,7 @@ When a tool returns UI resource metadata (_meta.ui.resourceUri), acknowledge the
 3. Select **"MCP Server"** (under Connectors section)
 4. Enter the MCP Server URL:
    ```
-   https://hr-concierge-mcp.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io/mcp
+   https://<your-mcp-app>.azurecontainerapps.io/mcp
    ```
 5. Click **"Connect"** — Copilot Studio will discover all 11 tools automatically:
 
@@ -201,7 +201,7 @@ Add each agent as a separate action:
 
 **HR Concierge (MCP Server):**
 - Type: MCP Server
-- URL: `https://hr-concierge-mcp.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io/mcp`
+- URL: `https://<your-mcp-app>.azurecontainerapps.io/mcp`
 
 **IT Help Desk (example — API Plugin):**
 - Type: API Plugin (OpenAPI)
@@ -320,7 +320,7 @@ The `declarativeAgent.json` already references the MCP Server:
     {
       "id": "hrMCPServer",
       "type": "McpServer",
-      "url": "https://hr-concierge-mcp.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io/mcp",
+      "url": "https://<your-mcp-app>.azurecontainerapps.io/mcp",
       "description": "HR Concierge MCP Server — provides HR tools with interactive UI widgets"
     }
   ]
@@ -359,13 +359,13 @@ To compose multiple agents in the declarative agent approach, add more actions:
     {
       "id": "hrMCPServer",
       "type": "McpServer",
-      "url": "https://hr-concierge-mcp.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io/mcp",
+      "url": "https://<your-mcp-app>.azurecontainerapps.io/mcp",
       "description": "HR tools with interactive UI widgets"
     },
     {
       "id": "itHelpDesk",
       "type": "McpServer",
-      "url": "https://your-it-mcp-server.azurecontainerapps.io/mcp",
+      "url": "https://<your-it-mcp-app>.azurecontainerapps.io/mcp",
       "description": "IT Help Desk tools for password resets, access, devices"
     },
     {
@@ -385,14 +385,14 @@ M365 Copilot will orchestrate between all registered actions based on the user's
 ### Verify MCP Server Health
 
 ```bash
-curl https://hr-concierge-mcp.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io/health
+curl https://<your-mcp-app>.azurecontainerapps.io/health
 # Expected: {"status":"healthy","server":"hr-concierge-mcp","version":"1.0.0"}
 ```
 
 ### Test Tool Invocation Directly
 
 ```bash
-curl -X POST https://hr-concierge-api.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io/api/tools/get_workday_form_schema \
+curl -X POST https://<your-api-app>.azurecontainerapps.io/api/tools/get_workday_form_schema \
   -H "Content-Type: application/json" \
   -d '{"change_types_csv": "address-change"}'
 ```

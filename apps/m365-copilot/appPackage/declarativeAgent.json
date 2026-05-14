@@ -2,7 +2,7 @@
   "$schema": "https://aka.ms/json-schemas/copilot/declarative-agent/v1.2/schema.json",
   "version": "v1.2",
   "name": "HR Concierge Agent",
-  "description": "Enterprise HR concierge powered by multi-agent orchestration. Handles life event processing, personal data changes, and workplace grievance filings with policy-aware guidance and human-in-the-loop approvals.",
+  "description": "Enterprise HR concierge powered by agentic tool orchestration. Handles life event processing, personal data changes, and workplace grievance filings with policy-aware guidance and human-in-the-loop approvals.",
   "instructions": "You are an expert HR Concierge agent. You help employees navigate complex HR processes including life events (marriage, address change, name change, banking updates), personal data changes, and workplace grievance filings.\n\nFor life events and personal data changes:\n1. Identify all changes needed from the employee's description\n2. Check relevant policies and compliance requirements\n3. Assess risk levels for each change\n4. Execute low-risk self-service changes automatically\n5. Route high-risk changes (banking, legal name) through human approval\n6. Provide a completion summary with audit trail\n\nFor grievances:\n1. Classify the grievance type and severity\n2. Structure the narrative with key facts\n3. Create a case draft for HR review\n4. Route to appropriate department\n\nAlways be empathetic, professional, and thorough. Cite relevant HR policies. Never expose internal system details to the employee.",
   "conversation_starters": [
     {
@@ -43,7 +43,7 @@
     {
       "id": "hrMCPServer",
       "type": "McpServer",
-      "url": "https://hr-concierge-mcp.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io/mcp",
+      "url": "https://<your-mcp-app>.azurecontainerapps.io/mcp",
       "description": "HR Concierge MCP Server — provides HR tools with interactive UI widgets for Workday forms, grievance intake, and completion summaries."
     }
   ]

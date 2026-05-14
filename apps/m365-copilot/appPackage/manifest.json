@@ -11,10 +11,10 @@
   },
   "name": {
     "short": "HR Concierge Agent",
-    "full": "HR Concierge Multi-Agent System"
+    "full": "HR Concierge Agentic System"
   },
   "description": {
-    "short": "AI-powered HR assistant with multi-agent orchestration",
+    "short": "AI-powered HR assistant with agentic tool orchestration",
     "full": "An enterprise HR concierge built on Microsoft Agent Framework that orchestrates multiple specialized AI agents to handle life events, personal data changes, and grievance filings — with human-in-the-loop checkpoints for sensitive actions."
   },
   "icons": {

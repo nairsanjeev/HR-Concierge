@@ -1,4 +1,4 @@
-"""Tool definitions for the HR multi-agent workflow.
+"""Tool definitions for the HR agentic workflow.
 
 Each tool maps to a backend capability.  Tools that mutate sensitive data
 use ``approval_mode="always_require"`` so AG-UI emits an interrupt and the

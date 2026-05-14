@@ -11,7 +11,7 @@ const scenarios = [
     id: 'life-event',
     title: 'Life Event Concierge',
     description:
-      'Handle personal data changes triggered by life events — marriage, relocation, name change, and more. Multi-agent orchestration classifies, validates, and executes changes across downstream systems.',
+      'Handle personal data changes triggered by life events — marriage, relocation, name change, and more. Agentic orchestration classifies, validates, and executes changes across downstream systems.',
     icon: Heart,
     color: 'from-violet-500 to-purple-600',
     bg: 'bg-violet-500/10',
@@ -40,7 +40,7 @@ const scenarios = [
 ];
 
 const features = [
-  { icon: Network, label: 'Multi-Agent Orchestration', desc: '7 specialized agents coordinated by a central orchestrator' },
+  { icon: Network, label: 'Agentic Tool Orchestration', desc: '11 specialized tools coordinated by a single intelligent agent' },
   { icon: Bot, label: 'AG-UI Protocol', desc: 'Real-time streaming with adaptive generative UI' },
   { icon: Shield, label: 'Human-in-the-Loop', desc: 'Approval gates for sensitive actions with audit trail' },
   { icon: FileCheck, label: 'ServiceNow A2A', desc: 'Knowledge retrieval and case mgmt via A2A protocol' },
@@ -91,7 +91,7 @@ export default function HomePage() {
               <span className="text-[var(--text-primary)]">Intelligence Platform</span>
             </h1>
             <p className="text-xl text-[var(--text-secondary)] max-w-2xl mx-auto mb-10 leading-relaxed">
-              Enterprise-grade multi-agent orchestration for HR workflows — life event processing, grievance intake,
+              Enterprise-grade agentic orchestration for HR workflows — life event processing, grievance intake,
               and policy guidance. Adaptive generative UI with human-in-the-loop safety.
             </p>
             <div className="flex items-center justify-center gap-4">

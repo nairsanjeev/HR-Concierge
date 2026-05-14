@@ -2,7 +2,7 @@
 
 ## System Architecture
 
-The HR Concierge demo is a **multi-agent orchestration system** built on three pillars:
+The HR Concierge demo is an **agentic orchestration system** built on three pillars:
 
 1. **Microsoft Agent Framework** — Python SDK for defining agents, tools, and workflows
 2. **AG-UI Protocol** — Server-Sent Events streaming for real-time UI updates
@@ -147,7 +147,7 @@ stateDiagram-v2
 | Styling | TailwindCSS + Framer Motion | Design system + animations |
 | Streaming | EventSource (SSE) | AG-UI protocol client |
 | Backend | FastAPI + Python 3.11 | API server + SSE endpoint |
-| Orchestration | Microsoft Agent Framework | Multi-agent workflow |
+| Orchestration | Microsoft Agent Framework | Agentic tool workflow |
 | LLM | Azure OpenAI GPT-4o | Agent reasoning |
 | Knowledge | ServiceNow A2A | HR knowledge base |
 | Documents | SharePoint / Foundry IQ | Policy document grounding |

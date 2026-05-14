@@ -22,7 +22,7 @@ export default function IntakeView({ uiState, isStreaming }: Props) {
             </div>
             <div>
               <h3 className="font-semibold text-sm">Analyzing your request</h3>
-              <p className="text-xs text-[var(--text-muted)]">Our multi-agent team is processing…</p>
+              <p className="text-xs text-[var(--text-muted)]">Our agent is processing your request…</p>
             </div>
             <Loader2 className="w-5 h-5 text-brand-400 animate-spin ml-auto" />
           </div>

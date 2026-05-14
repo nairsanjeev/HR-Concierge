@@ -1,6 +1,6 @@
-# HR Concierge — Multi-Agent Demo
+# HR Concierge — Agentic HR Demo
 
-> **Enterprise-grade multi-agent HR assistant** built on **Microsoft Agent Framework** with **AG-UI protocol**, **ServiceNow A2A** integration, and **M365 Copilot** surface — designed for executive demos.
+> **Enterprise-grade agentic HR assistant** built on **Microsoft Agent Framework** with **AG-UI protocol**, **ServiceNow A2A** integration, and **M365 Copilot** surface — designed for executive demos.
 
 ![Architecture](docs/architecture/architecture-diagram.svg)
 
@@ -10,7 +10,7 @@
 
 | Capability | Implementation |
 |---|---|
-| **Multi-Agent Orchestration** | 8 specialized agents with handoff-based workflow via Microsoft Agent Framework |
+| **Agentic Tool Orchestration** | Single agent with 11 specialized tools, managed by Microsoft Agent Framework |
 | **AG-UI Protocol** | Real-time SSE streaming with adaptive generative UI |
 | **Human-in-the-Loop** | Approval checkpoints for high-risk changes (banking, legal name) |
 | **ServiceNow A2A** | Live integration for knowledge search & incident management |
@@ -82,18 +82,23 @@ An employee describes a workplace issue and the system:
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Agent Team
+### Tool Capabilities
 
-| # | Agent | Role |
+The single HR Concierge agent orchestrates 11 specialized tools:
+
+| # | Tool | Purpose |
 |---|---|---|
-| 1 | **Orchestrator** | Routes requests, coordinates handoffs |
-| 2 | **Intent Classifier** | Detects life event types, affected fields |
-| 3 | **Policy Advisor** | Retrieves & interprets HR policies |
-| 4 | **Risk Assessor** | Evaluates compliance risk per change |
-| 5 | **Action Executor** | Applies changes (self-service or approval) |
-| 6 | **Summary Generator** | Creates audit trail & completion report |
-| 7 | **Grievance Classifier** | Categorizes grievance type & severity |
-| 8 | **Narrative Structurer** | Structures facts, identifies gaps, drafts case |
+| 1 | `query_knowledge_base` | Policy Q&A via SharePoint / Foundry IQ |
+| 2 | `retrieve_policy_guidance` | ServiceNow knowledge article retrieval |
+| 3 | `assess_risk_and_compliance` | Evaluates risk per change type |
+| 4 | `build_impact_map` | Maps downstream system dependencies |
+| 5 | `submit_high_risk_changes` | Routes sensitive changes for approval |
+| 6 | `execute_self_service_changes` | Applies low-risk changes immediately |
+| 7 | `generate_completion_summary` | Creates audit trail & completion report |
+| 8 | `structure_narrative` | Organizes grievance facts and gaps |
+| 9 | `create_grievance_case` | Files formal grievance with ER team |
+| 10 | `get_workday_form_schema` | Returns Workday form fields for change types |
+| 11 | `update_workday_employee` | Submits data changes to Workday HCM |
 
 ---
 
@@ -163,8 +168,8 @@ See [docs/demo-script/demo-guide.md](docs/demo-script/demo-guide.md) for a detai
 
 1. Open the web app → impressive landing page with agent architecture visualization
 2. Click "Life Event Concierge" → choose the marriage/name change prompt
-3. Watch the multi-agent orchestration in real-time:
-   - Chat panel shows streaming responses with agent handoffs
+3. Watch the agentic orchestration in real-time:
+   - Chat panel shows streaming responses with tool invocations
    - Center panel transforms through stages (Intake → Triage → Action Plan → Review → Completed)
    - Right panel shows live orchestration events, tool calls, and audit timeline
 4. When the approval card appears, click "Approve" to simulate human-in-the-loop
@@ -246,9 +251,9 @@ All three services are deployed as Azure Container Apps in resource group `rg-hr
 
 | Service | URL | Image |
 |---|---|---|
-| Backend API | `https://hr-concierge-api.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io` | `hrconciergeacr048757.azurecr.io/hr-concierge-api:v3` |
-| Web Frontend | `https://hr-concierge-web.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io` | `hrconciergeacr048757.azurecr.io/hr-concierge-web:v3` |
-| MCP Server | `https://hr-concierge-mcp.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io` | `hrconciergeacr048757.azurecr.io/hr-concierge-mcp:v1` |
+| Backend API | `https://<your-api-app>.azurecontainerapps.io` | `<your-acr>.azurecr.io/hr-concierge-api:v3` |
+| Web Frontend | `https://<your-web-app>.azurecontainerapps.io` | `<your-acr>.azurecr.io/hr-concierge-web:v3` |
+| MCP Server | `https://<your-mcp-app>.azurecontainerapps.io` | `<your-acr>.azurecr.io/hr-concierge-mcp:v1` |
 
 **Login credentials:** Sanjeev Nair / demo123
 
