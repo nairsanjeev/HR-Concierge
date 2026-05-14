@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grievance Intake — HR Concierge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; color: #e2e8f0; }
+    .section { border: 1px solid #334155; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; }
+    .section-header { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+    input, select, textarea { background: #0f172a; border: 1px solid #334155; border-radius: 0.375rem; padding: 0.5rem 0.75rem; width: 100%; color: #e2e8f0; font-size: 0.875rem; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.3); }
+    label { font-size: 0.8rem; font-weight: 500; color: #94a3b8; display: block; margin-bottom: 0.25rem; }
+    .required::after { content: ' *'; color: #f87171; }
+    .btn-primary { background: #2563eb; color: white; padding: 0.625rem 1.25rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer; width: 100%; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .confidential-note { background: #1e293b; border: 1px solid #f59e0b; border-radius: 0.375rem; padding: 0.75rem; font-size: 0.8rem; color: #fbbf24; }
+    .success-banner { background: #065f46; border: 1px solid #059669; border-radius: 0.5rem; padding: 1rem; margin-top: 1rem; }
+  </style>
+</head>
+<body class="p-4 max-w-lg mx-auto">
+  <div id="app">
+    <div class="flex items-center gap-2 mb-3">
+      <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+      <h1 class="text-lg font-bold">Grievance Intake Form</h1>
+    </div>
+
+    <div class="confidential-note mb-4">
+      <strong>⚠ Confidential:</strong> This form is handled under strict confidentiality. Only authorized Employee Relations personnel will have access.
+    </div>
+
+    <!-- Incident Details -->
+    <div class="section">
+      <div class="section-header text-red-400">Incident Details</div>
+      <div class="mb-3">
+        <label class="required">Describe what happened</label>
+        <textarea id="description" rows="4" placeholder="Provide as much detail as possible about the incident(s)…"></textarea>
+      </div>
+      <div class="mb-3">
+        <label class="required">Type of Concern</label>
+        <select id="category">
+          <option value="">Select...</option>
+          <option value="harassment">Harassment</option>
+          <option value="discrimination">Discrimination</option>
+          <option value="retaliation">Retaliation</option>
+          <option value="bullying">Bullying</option>
+          <option value="hostile">Hostile Work Environment</option>
+          <option value="unfair-treatment">Unfair Treatment</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="required">Frequency</label>
+        <select id="frequency">
+          <option value="">Select...</option>
+          <option value="one-time">One-time incident</option>
+          <option value="few-times">Happened a few times</option>
+          <option value="ongoing">Ongoing / repeated pattern</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="section">
+      <div class="section-header text-amber-400">Timeline & Dates</div>
+      <div class="mb-3">
+        <label class="required">Date of Most Recent Incident</label>
+        <input id="date_of_incident" type="date" />
+      </div>
+      <div class="mb-3">
+        <label>Date of First Incident (if recurring)</label>
+        <input id="date_first" type="date" />
+      </div>
+      <div class="mb-3">
+        <label>Location of Incident</label>
+        <input id="location" type="text" placeholder="e.g., Office floor 3, conference room, virtual meeting" />
+      </div>
+    </div>
+
+    <!-- People -->
+    <div class="section">
+      <div class="section-header text-blue-400">People Involved</div>
+      <div class="mb-3">
+        <label class="required">Name(s) of Person(s) Involved</label>
+        <input id="respondent" type="text" placeholder="Name and title/role if known" />
+      </div>
+      <div class="mb-3">
+        <label>Witnesses</label>
+        <input id="witnesses" type="text" placeholder="Names of anyone who witnessed the incident(s)" />
+      </div>
+    </div>
+
+    <!-- Desired Outcome -->
+    <div class="section">
+      <div class="section-header text-emerald-400">Desired Outcome</div>
+      <div class="mb-3">
+        <label>What outcome would you like?</label>
+        <select id="desired_outcome">
+          <option value="">Select...</option>
+          <option value="investigation">Formal investigation</option>
+          <option value="mediation">Mediation / facilitated conversation</option>
+          <option value="awareness">Just want it documented / on record</option>
+          <option value="transfer">Transfer / reassignment</option>
+          <option value="unsure">Not sure — need guidance</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="submit-btn" class="btn-primary">Submit Grievance</button>
+    <div id="success" class="success-banner hidden">
+      <p class="font-semibold text-emerald-300">✓ Grievance case created</p>
+      <p class="text-sm text-emerald-200 mt-1" id="success-msg"></p>
+    </div>
+  </div>
+
+  <script>
+    const MCP_ORIGIN = '*';
+    let toolInput = null;
+
+    window.addEventListener('message', (event) => {
+      try {
+        const msg = JSON.parse(typeof event.data === 'string' ? event.data : JSON.stringify(event.data));
+        if (msg.method === 'ui/toolInput' || msg.type === 'tool_input') {
+          toolInput = msg.params?.input || msg.data;
+          // Pre-fill from structured intake if available
+          if (toolInput?.structured_intake) {
+            const intake = toolInput.structured_intake;
+            if (intake.summary) document.getElementById('description').value = intake.summary.replace('Employee reports: ', '');
+            if (intake.severity) {
+              // Highlight severity
+            }
+          }
+        }
+        if (msg.method === 'ui/initialize') {
+          window.parent.postMessage(JSON.stringify({
+            jsonrpc: '2.0', id: msg.id, result: { capabilities: {} }
+          }), MCP_ORIGIN);
+        }
+      } catch (e) {}
+    });
+
+    document.getElementById('submit-btn').addEventListener('click', () => {
+      const description = document.getElementById('description').value;
+      const category = document.getElementById('category').value;
+      const frequency = document.getElementById('frequency').value;
+      const date_of_incident = document.getElementById('date_of_incident').value;
+
+      if (!description || !category || !frequency || !date_of_incident) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+
+      const caseDetails = {
+        description,
+        category,
+        frequency,
+        date_of_incident,
+        date_first: document.getElementById('date_first').value,
+        location: document.getElementById('location').value,
+        respondent: document.getElementById('respondent').value,
+        witnesses: document.getElementById('witnesses').value,
+        desired_outcome: document.getElementById('desired_outcome').value,
+        severity: frequency === 'ongoing' ? 'high' : 'medium',
+      };
+
+      // Call tool via MCP protocol
+      window.parent.postMessage(JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: {
+          name: 'create_grievance_case',
+          arguments: { case_details: JSON.stringify(caseDetails) }
+        }
+      }), MCP_ORIGIN);
+
+      document.getElementById('submit-btn').disabled = true;
+      document.getElementById('submit-btn').textContent = 'Submitted ✓';
+      document.getElementById('success').classList.remove('hidden');
+      document.getElementById('success-msg').textContent =
+        'Your case has been assigned to the Employee Relations team. An ER specialist will contact you within 48 hours.';
+    });
+  </script>
+</body>
+</html>

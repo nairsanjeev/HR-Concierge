@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Completion Summary — HR Concierge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; color: #e2e8f0; }
+    .stat-card { background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; padding: 1rem; text-align: center; }
+    .stat-number { font-size: 1.5rem; font-weight: 700; }
+    .stat-label { font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem; }
+    .step-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid #1e293b; }
+    .step-icon { width: 1.5rem; height: 1.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
+    .step-done { background: #065f46; color: #34d399; }
+    .step-pending { background: #78350f; color: #fbbf24; }
+    .section-title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin: 1rem 0 0.5rem; }
+  </style>
+</head>
+<body class="p-4 max-w-lg mx-auto">
+  <div id="app">
+    <div class="flex items-center gap-2 mb-4">
+      <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <h1 class="text-lg font-bold">Workflow Summary</h1>
+    </div>
+
+    <!-- Stats grid -->
+    <div id="stats" class="grid grid-cols-3 gap-3 mb-4">
+      <div class="stat-card">
+        <div class="stat-number text-brand-400" id="stat-total">-</div>
+        <div class="stat-label">Requested</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number text-emerald-400" id="stat-completed">-</div>
+        <div class="stat-label">Completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number text-amber-400" id="stat-pending">-</div>
+        <div class="stat-label">Pending Approval</div>
+      </div>
+    </div>
+
+    <!-- Next steps -->
+    <div id="next-steps-section" class="hidden">
+      <div class="section-title">Next Steps</div>
+      <div id="next-steps" class="space-y-1"></div>
+    </div>
+
+    <!-- Documents needed -->
+    <div id="docs-section" class="hidden">
+      <div class="section-title">Documents Needed</div>
+      <div id="docs-list" class="space-y-1"></div>
+    </div>
+
+    <p class="text-xs text-slate-500 mt-4" id="timeline"></p>
+  </div>
+
+  <script>
+    const MCP_ORIGIN = '*';
+
+    window.addEventListener('message', (event) => {
+      try {
+        const msg = JSON.parse(typeof event.data === 'string' ? event.data : JSON.stringify(event.data));
+        if (msg.method === 'ui/toolInput' || msg.type === 'tool_input') {
+          const data = msg.params?.input || msg.data;
+          renderSummary(data);
+        }
+        if (msg.method === 'ui/initialize') {
+          window.parent.postMessage(JSON.stringify({
+            jsonrpc: '2.0', id: msg.id, result: { capabilities: {} }
+          }), MCP_ORIGIN);
+        }
+      } catch (e) {}
+    });
+
+    function renderSummary(data) {
+      const summary = data?.summary || data;
+      if (!summary) return;
+
+      document.getElementById('stat-total').textContent = summary.total_changes_requested || 0;
+      document.getElementById('stat-completed').textContent = summary.auto_completed || 0;
+      document.getElementById('stat-pending').textContent = summary.pending_approval || 0;
+
+      // Next steps
+      if (summary.next_steps?.length) {
+        document.getElementById('next-steps-section').classList.remove('hidden');
+        const container = document.getElementById('next-steps');
+        container.innerHTML = summary.next_steps.map(step =>
+          `<div class="step-item"><div class="step-icon step-pending">→</div><span class="text-sm">${step}</span></div>`
+        ).join('');
+      }
+
+      // Documents
+      if (summary.documents_needed?.length) {
+        document.getElementById('docs-section').classList.remove('hidden');
+        const container = document.getElementById('docs-list');
+        container.innerHTML = summary.documents_needed.map(doc =>
+          `<div class="step-item"><div class="step-icon step-pending">📄</div><span class="text-sm">${doc}</span></div>`
+        ).join('');
+      }
+
+      document.getElementById('timeline').textContent =
+        `Estimated completion: ${summary.estimated_completion || '5-7 business days'}`;
+    }
+
+    // Show placeholder if no data after 500ms
+    setTimeout(() => {
+      if (document.getElementById('stat-total').textContent === '-') {
+        document.getElementById('stats').insertAdjacentHTML('afterend',
+          '<p class="text-slate-400 text-sm mt-2">Awaiting completion data from the agent...</p>');
+      }
+    }, 500);
+  </script>
+</body>
+</html>

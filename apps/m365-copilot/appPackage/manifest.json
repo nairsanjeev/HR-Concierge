@@ -1,0 +1,41 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
+  "manifestVersion": "devPreview",
+  "version": "1.0.0",
+  "id": "{{APP_ID}}",
+  "developer": {
+    "name": "Contoso HR",
+    "websiteUrl": "https://contoso.com",
+    "privacyUrl": "https://contoso.com/privacy",
+    "termsOfUseUrl": "https://contoso.com/terms"
+  },
+  "name": {
+    "short": "HR Concierge Agent",
+    "full": "HR Concierge Multi-Agent System"
+  },
+  "description": {
+    "short": "AI-powered HR assistant with multi-agent orchestration",
+    "full": "An enterprise HR concierge built on Microsoft Agent Framework that orchestrates multiple specialized AI agents to handle life events, personal data changes, and grievance filings — with human-in-the-loop checkpoints for sensitive actions."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#7C3AED",
+  "copilotAgents": {
+    "declarativeAgents": [
+      {
+        "id": "hrConciergeAgent",
+        "file": "declarativeAgent.json"
+      }
+    ]
+  },
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "*.contoso.com",
+    "*.microsoft.com"
+  ]
+}

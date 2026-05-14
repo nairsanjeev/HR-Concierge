@@ -1,0 +1,53 @@
+{
+  "$schema": "https://aka.ms/json-schemas/copilot/plugin/v2.2/schema.json",
+  "schema_version": "v2.2",
+  "name_for_human": "HR Orchestrator API",
+  "description_for_human": "Execute HR workflows via the multi-agent orchestration backend",
+  "description_for_model": "Use this plugin to process employee HR requests. It orchestrates multiple specialized AI agents to handle life event processing, personal data changes, and grievance filings. The backend uses Microsoft Agent Framework with AG-UI protocol for real-time streaming.",
+  "contact_email": "hr-ai@contoso.com",
+  "namespace": "hrOrchestrator",
+  "logo_url": "https://contoso.com/logo.png",
+  "legal_info_url": "https://contoso.com/legal",
+  "privacy_policy_url": "https://contoso.com/privacy",
+  "functions": [
+    {
+      "name": "processHRRequest",
+      "description": "Process an employee HR request through the multi-agent orchestration pipeline. Handles life events, personal data changes, and grievance filings.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "The employee's HR request or question"
+          },
+          "scenario": {
+            "type": "string",
+            "enum": ["life-event", "grievance", "auto"],
+            "description": "The type of HR scenario to process. Use 'auto' for automatic detection."
+          }
+        },
+        "required": ["message"]
+      }
+    },
+    {
+      "name": "getScenarios",
+      "description": "Get the list of supported HR scenarios and their descriptions.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ],
+  "runtimes": [
+    {
+      "type": "OpenApi",
+      "auth": {
+        "type": "None"
+      },
+      "spec": {
+        "url": "openapi.yaml"
+      },
+      "run_for_functions": ["processHRRequest", "getScenarios"]
+    }
+  ]
+}

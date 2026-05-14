@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orchestration — HR Concierge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; color: #e2e8f0; }
+    .step { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 0.5rem; transition: all 0.3s; }
+    .step.active { background: #1e293b; border: 1px solid #8b5cf6; }
+    .step.completed { background: #0f2922; border: 1px solid #059669; }
+    .step.pending { background: #0f172a; border: 1px solid #334155; opacity: 0.6; }
+    .step-dot { width: 1.5rem; height: 1.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.7rem; margin-top: 0.1rem; }
+    .dot-active { background: #8b5cf6; animation: pulse 1.5s infinite; }
+    .dot-done { background: #059669; }
+    .dot-pending { background: #334155; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .step-title { font-size: 0.875rem; font-weight: 600; }
+    .step-desc { font-size: 0.75rem; color: #94a3b8; }
+    .header { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #8b5cf6; margin-bottom: 0.75rem; letter-spacing: 0.05em; }
+  </style>
+</head>
+<body class="p-4 max-w-md mx-auto">
+  <div id="app">
+    <div class="header">⚡ Agent Orchestration</div>
+    <div id="steps-container">
+      <!-- Steps will be rendered dynamically -->
+    </div>
+    <p class="text-xs text-slate-500 mt-3" id="status-text">Waiting for orchestration data...</p>
+  </div>
+
+  <script>
+    const MCP_ORIGIN = '*';
+    const DEFAULT_STEPS = [
+      { id: 'classify', title: 'Classify & Triage', desc: 'Identifying change types and routing' },
+      { id: 'policy', title: 'Policy Retrieval', desc: 'Looking up relevant HR policies' },
+      { id: 'risk', title: 'Risk Assessment', desc: 'Evaluating compliance requirements' },
+      { id: 'impact', title: 'Impact Analysis', desc: 'Mapping downstream system effects' },
+      { id: 'execute', title: 'Execute Changes', desc: 'Processing approved changes' },
+      { id: 'summary', title: 'Summary & Audit', desc: 'Generating completion report' },
+    ];
+
+    let currentSteps = DEFAULT_STEPS.map(s => ({ ...s, status: 'pending' }));
+
+    window.addEventListener('message', (event) => {
+      try {
+        const msg = JSON.parse(typeof event.data === 'string' ? event.data : JSON.stringify(event.data));
+        if (msg.method === 'ui/toolInput' || msg.type === 'tool_input') {
+          const data = msg.params?.input || msg.data;
+          updateSteps(data);
+        }
+        if (msg.method === 'ui/initialize') {
+          window.parent.postMessage(JSON.stringify({
+            jsonrpc: '2.0', id: msg.id, result: { capabilities: {} }
+          }), MCP_ORIGIN);
+          renderSteps();
+        }
+      } catch (e) {}
+    });
+
+    function updateSteps(data) {
+      if (data?.completed_step) {
+        const step = currentSteps.find(s => s.id === data.completed_step);
+        if (step) step.status = 'completed';
+        // Activate next pending step
+        const next = currentSteps.find(s => s.status === 'pending');
+        if (next) next.status = 'active';
+      }
+      if (data?.active_step) {
+        currentSteps.forEach(s => {
+          if (s.id === data.active_step) s.status = 'active';
+        });
+      }
+      if (data?.all_complete) {
+        currentSteps.forEach(s => s.status = 'completed');
+      }
+      renderSteps();
+    }
+
+    function renderSteps() {
+      const container = document.getElementById('steps-container');
+      container.innerHTML = currentSteps.map(step => {
+        const dotClass = step.status === 'completed' ? 'dot-done' : step.status === 'active' ? 'dot-active' : 'dot-pending';
+        const stepClass = step.status;
+        const icon = step.status === 'completed' ? '✓' : step.status === 'active' ? '●' : '○';
+        return `
+          <div class="step ${stepClass}">
+            <div class="step-dot ${dotClass}">${icon}</div>
+            <div>
+              <div class="step-title">${step.title}</div>
+              <div class="step-desc">${step.desc}</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      const completed = currentSteps.filter(s => s.status === 'completed').length;
+      const total = currentSteps.length;
+      document.getElementById('status-text').textContent =
+        completed === total ? 'All steps completed ✓' : `${completed}/${total} steps completed`;
+    }
+
+    // Initial render
+    renderSteps();
+  </script>
+</body>
+</html>

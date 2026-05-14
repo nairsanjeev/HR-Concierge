@@ -1,0 +1,47 @@
+openapi: 3.0.3
+info:
+  title: HR Concierge Orchestration API
+  description: Multi-agent HR orchestration backend using Microsoft Agent Framework and AG-UI protocol
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: https://hr-concierge-api.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io
+    description: Azure Container Apps deployment
+paths:
+  /api/scenarios:
+    get:
+      operationId: getScenarios
+      summary: List supported HR scenarios
+      responses:
+        "200":
+          description: List of scenarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    title:
+                      type: string
+                    description:
+                      type: string
+  /api/health:
+    get:
+      operationId: healthCheck
+      summary: Check API health
+      responses:
+        "200":
+          description: Health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  mode:
+                    type: string
