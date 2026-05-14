@@ -100,11 +100,11 @@ When a tool returns UI resource metadata (_meta.ui.resourceUri), acknowledge the
 
 4. Click **"Create"**
 
-### Step 1.3: Add the MCP Server as an Action
+### Step 1.3: Add the MCP Server as a Tool
 
-1. In your new agent, go to **"Actions"** tab in the left panel
-2. Click **"+ Add an action"**
-3. Select **"MCP Server"** (under Connectors section)
+1. In the left navigation panel, click **"Tools"**
+2. Click **"+ Add a tool"** at the top
+3. Select **"MCP Server"** from the tool type options
 4. Enter the MCP Server URL:
    ```
    https://<your-mcp-app>.azurecontainerapps.io/mcp
@@ -126,12 +126,13 @@ When a tool returns UI resource metadata (_meta.ui.resourceUri), acknowledge the
    | `get_workday_form_schema` | Get form fields for a change type |
 
 6. Click **"Add"** to confirm
+7. Open your **HR Concierge Assistant** agent and assign these tools to it under the agent's configuration
 
 ### Step 1.4: Configure Authentication (Optional but Recommended)
 
 For production use, configure OAuth2 authentication:
 
-1. In the MCP action settings, click **"Authentication"**
+1. In the tool settings, click **"Authentication"**
 2. Select **"OAuth 2.0"**
 3. Configure:
    - **Authority**: `https://login.microsoftonline.com/{tenant-id}`
@@ -195,9 +196,9 @@ If unclear which domain, ask the employee to clarify.
 Always be empathetic and professional.
 ```
 
-### Step 2.3: Add Multiple Actions
+### Step 2.3: Add Multiple Tools
 
-Add each agent as a separate action:
+Add each backend as a separate tool via **Tools** in the left nav:
 
 **HR Concierge (MCP Server):**
 - Type: MCP Server
@@ -214,6 +215,8 @@ Add each agent as a separate action:
 **Learning (example — Connector):**
 - Type: Connector
 - Use a pre-built connector (e.g., LinkedIn Learning, SAP SuccessFactors)
+
+Then assign the relevant tools to your orchestrator agent.
 
 ### Step 2.4: Add Topics for Routing (Optional)
 
