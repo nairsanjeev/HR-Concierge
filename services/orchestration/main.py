@@ -15,9 +15,13 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from typing import Optional
 
-from agent_framework import Agent
+from pathlib import Path
+
+from agent_framework import Agent, SkillsProvider
 from agent_framework_openai import OpenAIChatCompletionClient
 from agent_framework_ag_ui import add_agent_framework_fastapi_endpoint
 
@@ -48,6 +52,36 @@ chat_client = OpenAIChatCompletionClient(
     api_version=settings.azure_openai_api_version,
 )
 
+# ── Sync Azure OpenAI client (for /api/invoke endpoint) ─────────────────────
+
+from openai import AzureOpenAI as _AzureOpenAI
+
+_sync_openai = _AzureOpenAI(
+    azure_endpoint=settings.azure_openai_endpoint,
+    api_key=settings.azure_openai_api_key,
+    api_version=settings.azure_openai_api_version,
+)
+
+# ── Skills Provider (file-based expense-report skill) ────────────────────────
+
+def _expense_script_runner(skill, script, args=None):
+    """Run a skill script in-process (safe for demo — single known script)."""
+    import importlib.util
+    import os
+
+    script_path = os.path.join(skill.path, script.path)
+    spec = importlib.util.spec_from_file_location(script.name, script_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    input_json = (args or {}).get("report_json", "{}")
+    return mod.validate_expense_report(input_json)
+
+
+skills_provider = SkillsProvider.from_paths(
+    Path(__file__).parent / "skills",
+    script_runner=_expense_script_runner,
+)
+
 # ── HR Concierge Agent ───────────────────────────────────────────────────────
 
 hr_concierge = Agent(
@@ -56,6 +90,7 @@ hr_concierge = Agent(
     name="HR Concierge",
     description="Warm, professional AI assistant that helps employees with HR requests",
     tools=TOOLS,
+    context_providers=[skills_provider],
     default_options={"temperature": 0.3},
 )
 
@@ -67,6 +102,125 @@ add_agent_framework_fastapi_endpoint(
     path="/api/agent",
     allow_origins=settings.cors_origin_list,
 )
+
+
+# ── Synchronous Invoke Endpoint (for M365 CEA bot relay) ─────────────────────
+
+class InvokeRequest(BaseModel):
+    message: str
+    conversation_id: str = "default"
+    history: Optional[list[dict]] = None
+
+class ToolCallDetail(BaseModel):
+    name: str
+    arguments: dict
+    result: str
+
+class InvokeResponse(BaseModel):
+    answer: str
+    tool_calls: list[ToolCallDetail] = []
+    reasoning: str = ""
+
+@app.post("/api/invoke", response_model=InvokeResponse)
+async def invoke_agent(req: InvokeRequest):
+    """Run the HR Concierge agent synchronously and return the final answer.
+
+    Used by the M365 Custom Engine Agent (CEA bot) as a relay — the CEA
+    sends the user message here, we run the full agent loop with real tools,
+    and return the structured result for Adaptive Card rendering.
+    """
+    import json as _json
+
+    # Build messages: optional history + current message
+    messages = []
+    if req.history:
+        for msg in req.history[-10:]:  # keep last 10 turns
+            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+    messages.append({"role": "user", "content": req.message})
+
+    # Build tool definitions from our @tool-decorated functions
+    tool_defs = []
+    tool_map = {}
+    for t in TOOLS:
+        tool_defs.append(t.to_json_schema_spec())
+        tool_map[t.name] = t
+
+    api_messages = [{"role": "system", "content": HR_CONCIERGE_PROMPT}] + messages
+    collected_tool_calls: list[ToolCallDetail] = []
+
+    # Step 1: Classify intent and generate reasoning
+    reasoning_response = _sync_openai.chat.completions.create(
+        model=settings.azure_openai_model,
+        messages=[{"role": "system", "content": (
+            "You are an intent classifier for an HR Concierge system. "
+            "Given the user message, output a brief reasoning trace (2-4 lines) showing:\n"
+            "1. What category this falls into (Policy Question / Life Event Change / Grievance / Trivial Complaint / Expense Report)\n"
+            "2. What tools/actions you would invoke and why\n"
+            "3. Any risk assessment (e.g., high-risk change requiring approval)\n\n"
+            "Format: short bullet points. Be concise."
+        )}] + messages,
+        temperature=0.2,
+        max_completion_tokens=200,
+    )
+    reasoning_text = reasoning_response.choices[0].message.content or ""
+
+    # Run the tool-calling loop (max 10 iterations)
+    for _ in range(10):
+        response = _sync_openai.chat.completions.create(
+            model=settings.azure_openai_model,
+            messages=api_messages,
+            tools=tool_defs if tool_defs else None,
+            temperature=0.3,
+        )
+
+        choice = response.choices[0]
+
+        if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
+            # Append assistant message with tool calls
+            api_messages.append(choice.message.model_dump())
+
+            # Execute each tool call using our real tool implementations
+            for tc in choice.message.tool_calls:
+                tool_name = tc.function.name
+                tool_args_str = tc.function.arguments
+                try:
+                    tool_args = _json.loads(tool_args_str)
+                except Exception:
+                    tool_args = {}
+
+                # Execute the real tool
+                tool_fn = tool_map.get(tool_name)
+                if tool_fn:
+                    try:
+                        result = tool_fn.func(**tool_args)
+                    except Exception as e:
+                        result = _json.dumps({"error": str(e)})
+                else:
+                    result = _json.dumps({"error": f"Unknown tool: {tool_name}"})
+
+                collected_tool_calls.append(ToolCallDetail(
+                    name=tool_name,
+                    arguments=tool_args,
+                    result=result if isinstance(result, str) else _json.dumps(result),
+                ))
+
+                # Append tool result to messages
+                api_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result if isinstance(result, str) else _json.dumps(result),
+                })
+        else:
+            # Final answer
+            answer = choice.message.content or "I processed your request but didn't generate a text response."
+            return InvokeResponse(answer=answer, tool_calls=collected_tool_calls, reasoning=reasoning_text)
+
+    # If we exhausted iterations
+    return InvokeResponse(
+        answer="I completed processing but reached the maximum number of steps. Please try again or simplify your request.",
+        tool_calls=collected_tool_calls,
+        reasoning=reasoning_text,
+    )
 
 
 # ── REST API Endpoints ───────────────────────────────────────────────────────
@@ -106,6 +260,20 @@ async def get_scenarios():
                     "I want to report an issue but I don't know the correct category.",
                     "I believe I'm being discriminated against because of my age. Younger colleagues are promoted over me.",
                     "A coworker has been making inappropriate comments and I feel uncomfortable at work.",
+                ],
+            },
+            {
+                "id": "expense-report",
+                "title": "Expense Report",
+                "description": "Submit and validate expense reports against company policy — with automated limit checks and approval routing.",
+                "icon": "receipt",
+                "color": "green",
+                "sample_prompts": [
+                    "I need to submit an expense report for my business trip to Chicago last week.",
+                    "I have a few client dinner receipts and a hotel bill to expense.",
+                    "Can you help me file expenses for a conference I attended?",
+                    "I need to expense a team lunch, an Uber ride, and two nights at a hotel.",
+                    "Submit my expense report: flight $450, hotel $380, meals $120, rideshare $45.",
                 ],
             },
         ]
@@ -158,6 +326,16 @@ async def get_prompt_gallery():
                     {"text": "I just had a baby and need to add them to my health insurance, update my tax withholdings, and request parental leave.", "scenario": "life-event"},
                 ],
             },
+            {
+                "name": "Expense Reports",
+                "icon": "receipt",
+                "prompts": [
+                    {"text": "I need to submit an expense report for my trip to Chicago.", "scenario": "expense-report"},
+                    {"text": "Help me expense a client dinner ($120) and an Uber ($35).", "scenario": "expense-report"},
+                    {"text": "Submit expenses: flight $450, 2 nights hotel $380, meals $95.", "scenario": "expense-report"},
+                    {"text": "What are the meal expense limits for client entertainment?", "scenario": "general"},
+                ],
+            },
         ]
     }
 
@@ -186,6 +364,8 @@ from agents.tools import (
     update_workday_employee,
     structure_narrative,
     create_grievance_case,
+    submit_expense_report,
+    WORKDAY_FORM_SCHEMAS,
 )
 
 _TOOL_FUNCTIONS = {
@@ -200,6 +380,7 @@ _TOOL_FUNCTIONS = {
     "update_workday_employee": update_workday_employee,
     "structure_narrative": structure_narrative,
     "create_grievance_case": create_grievance_case,
+    "submit_expense_report": submit_expense_report,
 }
 
 
@@ -207,6 +388,210 @@ class ToolCallRequest(BaseModel):
     """Request body for tool invocation."""
     class Config:
         extra = "allow"
+
+
+class ProcessHRRequest(BaseModel):
+    """Request body for processHRRequest endpoint."""
+    message: str
+    scenario: str = "auto"
+
+
+# ── Intent detection mapping ──────────────────────────────────────────────────
+
+_KEYWORD_TO_INTENTS = {
+    "married": ["marriage", "name-change", "beneficiary-update"],
+    "marriage": ["marriage", "name-change", "beneficiary-update"],
+    "name": ["name-change"],
+    "legal name": ["name-change"],
+    "address": ["address-change"],
+    "moved": ["address-change"],
+    "relocat": ["address-change"],
+    "bank": ["bank-details"],
+    "direct deposit": ["bank-details"],
+    "emergency contact": ["emergency-contact"],
+    "beneficiary": ["beneficiary-update"],
+    "benefits": ["beneficiary-update", "marriage"],
+    "spouse": ["marriage", "beneficiary-update"],
+    "tax": ["marriage"],
+    "preferred name": ["preferred-name"],
+    "pronouns": ["preferred-name"],
+    "grievance": [],
+    "harass": [],
+    "discriminat": [],
+    "unfair": [],
+}
+
+
+def _detect_intents(message: str) -> list[str]:
+    """Detect change types from the user message."""
+    msg_lower = message.lower()
+    detected = set()
+    for keyword, intents in _KEYWORD_TO_INTENTS.items():
+        if keyword in msg_lower:
+            detected.update(intents)
+    return list(detected) if detected else ["marriage"]
+
+
+def _build_adaptive_card(change_types: list[str], message: str) -> dict:
+    """Build an Adaptive Card with form fields for the detected change types."""
+    # Gather all form fields
+    all_fields = []
+    seen_ids = set()
+    for ct in change_types:
+        for field in WORKDAY_FORM_SCHEMAS.get(ct, []):
+            if field["id"] not in seen_ids:
+                seen_ids.add(field["id"])
+                all_fields.append(field)
+
+    # Build card body
+    card_body = [
+        {
+            "type": "TextBlock",
+            "text": "HR Concierge — Workday Change Form",
+            "weight": "Bolder",
+            "size": "Large",
+            "color": "Accent",
+        },
+        {
+            "type": "TextBlock",
+            "text": f"Based on your request, I've identified the following changes needed: **{', '.join(ct.replace('-', ' ').title() for ct in change_types)}**",
+            "wrap": True,
+        },
+        {"type": "TextBlock", "text": " ", "spacing": "Small"},
+    ]
+
+    # Group fields by group name
+    groups: dict[str, list] = {}
+    for field in all_fields:
+        group = field.get("group", "Details")
+        groups.setdefault(group, []).append(field)
+
+    for group_name, fields in groups.items():
+        card_body.append({
+            "type": "TextBlock",
+            "text": group_name,
+            "weight": "Bolder",
+            "size": "Medium",
+            "spacing": "Medium",
+        })
+
+        for field in fields:
+            required_marker = " *" if field.get("required") else ""
+            if field["type"] == "select" and "options" in field:
+                card_body.append({
+                    "type": "Input.ChoiceSet",
+                    "id": field["id"],
+                    "label": f"{field['label']}{required_marker}",
+                    "isRequired": field.get("required", False),
+                    "choices": [{"title": opt["label"], "value": opt["value"]} for opt in field["options"]],
+                    "style": "compact",
+                })
+            elif field["type"] == "date":
+                card_body.append({
+                    "type": "Input.Date",
+                    "id": field["id"],
+                    "label": f"{field['label']}{required_marker}",
+                    "isRequired": field.get("required", False),
+                })
+            else:
+                card_body.append({
+                    "type": "Input.Text",
+                    "id": field["id"],
+                    "label": f"{field['label']}{required_marker}",
+                    "isRequired": field.get("required", False),
+                    "placeholder": field.get("placeholder", f"Enter {field['label'].lower()}"),
+                })
+
+    # Summary section
+    card_body.append({"type": "TextBlock", "text": " ", "spacing": "Medium"})
+    card_body.append({
+        "type": "TextBlock",
+        "text": "⚠️ High-risk changes (legal name, bank details) will require HR Operations approval after submission.",
+        "wrap": True,
+        "size": "Small",
+        "isSubtle": True,
+    })
+
+    card = {
+        "type": "AdaptiveCard",
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+        "version": "1.5",
+        "body": card_body,
+        "actions": [
+            {
+                "type": "Action.Submit",
+                "title": "Submit Changes to Workday",
+                "style": "positive",
+                "data": {
+                    "action": "submit_workday_changes",
+                    "change_types": change_types,
+                },
+            }
+        ],
+    }
+    return card
+
+
+@app.post("/api/process")
+async def process_hr_request(body: ProcessHRRequest):
+    """Process an HR request and return an Adaptive Card with form fields."""
+    message = body.message
+    scenario = body.scenario
+
+    # Detect if it's a grievance
+    grievance_keywords = ["grievance", "harass", "discriminat", "unfair", "hostile", "bully"]
+    is_grievance = scenario == "grievance" or any(kw in message.lower() for kw in grievance_keywords)
+
+    if is_grievance:
+        return {
+            "status": "grievance_intake",
+            "message": "I understand you're reporting a workplace concern. Let me help you structure this properly.",
+            "card": {
+                "type": "AdaptiveCard",
+                "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                "version": "1.5",
+                "body": [
+                    {"type": "TextBlock", "text": "Grievance / Workplace Concern Intake", "weight": "Bolder", "size": "Large", "color": "Accent"},
+                    {"type": "TextBlock", "text": "This form will help structure your concern for proper routing. All information is confidential.", "wrap": True},
+                    {"type": "Input.ChoiceSet", "id": "category", "label": "Category *", "isRequired": True, "choices": [
+                        {"title": "Harassment", "value": "harassment"},
+                        {"title": "Discrimination", "value": "discrimination"},
+                        {"title": "Retaliation", "value": "retaliation"},
+                        {"title": "Workplace Safety", "value": "safety"},
+                        {"title": "Management Conduct", "value": "management"},
+                        {"title": "Other", "value": "other"},
+                    ]},
+                    {"type": "Input.ChoiceSet", "id": "severity", "label": "Severity *", "isRequired": True, "choices": [
+                        {"title": "Low — Informal resolution preferred", "value": "low"},
+                        {"title": "Medium — Formal investigation needed", "value": "medium"},
+                        {"title": "High — Immediate intervention required", "value": "high"},
+                    ]},
+                    {"type": "Input.Text", "id": "narrative", "label": "Describe what happened *", "isRequired": True, "isMultiline": True, "placeholder": "Please provide details including dates, people involved, and specific incidents..."},
+                    {"type": "Input.Text", "id": "persons_involved", "label": "Person(s) involved", "placeholder": "Names and roles of those involved"},
+                    {"type": "Input.Date", "id": "incident_date", "label": "Date of most recent incident"},
+                    {"type": "Input.ChoiceSet", "id": "previous_reports", "label": "Have you reported this before?", "choices": [
+                        {"title": "No, this is the first report", "value": "no"},
+                        {"title": "Yes, verbally to my manager", "value": "verbal"},
+                        {"title": "Yes, formally to HR", "value": "formal"},
+                    ]},
+                ],
+                "actions": [
+                    {"type": "Action.Submit", "title": "Submit Grievance", "style": "positive", "data": {"action": "submit_grievance"}},
+                ],
+            },
+        }
+
+    # Life event / personal data change flow
+    change_types = _detect_intents(message)
+    card = _build_adaptive_card(change_types, message)
+
+    return {
+        "status": "form_ready",
+        "change_types": change_types,
+        "total_fields": sum(len(WORKDAY_FORM_SCHEMAS.get(ct, [])) for ct in change_types),
+        "message": f"I've identified {len(change_types)} type(s) of changes needed. Please fill out the form below to submit your updates to Workday.",
+        "card": card,
+    }
 
 
 @app.post("/api/tools/{tool_name}")

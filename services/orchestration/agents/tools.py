@@ -47,15 +47,16 @@ def query_knowledge_base(query: str) -> str:
     if not settings.azure_search_endpoint or not settings.azure_search_api_key:
         return json.dumps({"answer": None, "error": "Knowledge base not configured"})
 
+    index_name = settings.azure_search_knowledge_base
     url = (
-        f"{settings.azure_search_endpoint}/knowledgebases/"
-        f"{settings.azure_search_knowledge_base}/retrieve"
-        f"?api-version=2025-11-01-preview"
+        f"{settings.azure_search_endpoint}/indexes/"
+        f"{index_name}/docs/search"
+        f"?api-version=2024-07-01"
     )
     body = {
-        "messages": [
-            {"role": "user", "content": [{"type": "text", "text": query}]}
-        ],
+        "search": query,
+        "top": 5,
+        "select": "snippet,doc_url",
     }
     headers = {
         "Content-Type": "application/json",
@@ -77,13 +78,16 @@ def query_knowledge_base(query: str) -> str:
         else:
             data = asyncio.run(_call())
 
-        response_msgs = data.get("response", [])
-        if response_msgs:
-            content_parts = response_msgs[0].get("content", [])
-            if content_parts:
-                answer = content_parts[0].get("text", "")
-                if answer:
-                    return json.dumps({"answer": answer, "source": "SharePoint HR Policy Knowledge Base"})
+        results = data.get("value", [])
+        if results:
+            snippets = []
+            for doc in results:
+                snippet = doc.get("snippet", "")
+                if snippet:
+                    snippets.append(snippet)
+            if snippets:
+                combined = "\n\n---\n\n".join(snippets)
+                return json.dumps({"answer": combined, "source": "SharePoint HR Policy Knowledge Base"})
     except Exception as e:
         logger.warning(f"Knowledge base query failed: {e}")
 
@@ -500,4 +504,56 @@ def create_grievance_case(case_details: str) -> str:
             "You may add additional information at any time",
         ],
         "confidentiality_notice": "This case is handled under strict confidentiality. Only authorized ER personnel will have access.",
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# USE CASE 3 – Expense Report Submission
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@tool(approval_mode="always_require")
+def submit_expense_report(report_json: str) -> str:
+    """Submit a validated expense report for processing and reimbursement.
+
+    This action requires human approval before execution because it commits
+    financial transactions. The report_json should contain employee_id,
+    line_items (each with date, category, amount, description), and
+    an optional trip_name.
+
+    Call this only AFTER validating the report with the expense-report skill's
+    validate script and confirming the summary with the employee.
+    """
+    report = json.loads(report_json) if isinstance(report_json, str) else report_json
+    report_id = f"EXP-{uuid.uuid4().hex[:8].upper()}"
+    line_items = report.get("line_items", [])
+    total = sum(float(item.get("amount", 0)) for item in line_items)
+
+    # Determine approval level
+    if total < 500:
+        approval = "auto-approved"
+        status = "approved"
+    elif total <= 2000:
+        approval = "manager"
+        status = "pending_manager_approval"
+    elif total <= 10000:
+        approval = "vp"
+        status = "pending_vp_approval"
+    else:
+        approval = "cfo"
+        status = "pending_cfo_approval"
+
+    logger.info(f"[EXPENSE] Submitting report {report_id} — ${total:.2f} — {approval}")
+
+    return json.dumps({
+        "report_id": report_id,
+        "status": status,
+        "total_amount": round(total, 2),
+        "line_items_count": len(line_items),
+        "approval_level": approval,
+        "employee_id": report.get("employee_id", "EMP-001234"),
+        "submitted_at": _ts(),
+        "estimated_reimbursement": "3-5 business days" if status == "approved" else "After approval (5-10 business days)",
+        "tracking_url": f"https://hr-portal.example.com/expenses/{report_id}",
+        "message": f"Expense report {report_id} submitted successfully. Total: ${total:.2f}. Status: {status.replace('_', ' ').title()}.",
     })

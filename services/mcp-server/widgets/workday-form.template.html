@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workday Change Form</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', -apple-system, sans-serif; background: #fff; color: #242424; padding: 16px; line-height: 1.5; }
+h2 { font-size: 18px; font-weight: 600; margin-bottom: 4px; color: #0f6cbd; }
+.subtitle { font-size: 13px; color: #616161; margin-bottom: 16px; }
+.section { margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 8px; border: 1px solid #e0e0e0; }
+.section-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #242424; }
+.field { margin-bottom: 10px; }
+.field label { display: block; font-size: 12px; font-weight: 500; color: #424242; margin-bottom: 3px; }
+.field input, .field select { width: 100%; padding: 8px 10px; border: 1px solid #d1d1d1; border-radius: 4px; font-size: 14px; font-family: inherit; }
+.field input:focus, .field select:focus { outline: none; border-color: #0f6cbd; box-shadow: 0 0 0 1px #0f6cbd; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-primary { background: #0f6cbd; color: #fff; }
+.btn-primary:hover { background: #0a5199; }
+.btn-secondary { background: #f0f0f0; color: #424242; border: 1px solid #d1d1d1; }
+.actions { display: flex; gap: 8px; margin-top: 16px; }
+.status { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 13px; display: none; }
+.status.success { display: block; background: #dff6dd; color: #0e700e; border: 1px solid #9ee09e; }
+.status.error { display: block; background: #fde7e9; color: #c50f1f; border: 1px solid #f1bbbc; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<h2>Workday Personal Data Change</h2>
+<p class="subtitle" id="subtitle">Fill in the applicable sections below.</p>
+
+<form id="form">
+  <div id="name-change-section" class="section">
+    <div class="section-title">📝 Legal Name Change</div>
+    <div class="field"><label>New Legal First Name</label><input type="text" name="new_first_name" placeholder="Enter new first name"></div>
+    <div class="field"><label>New Legal Last Name</label><input type="text" name="new_last_name" placeholder="Enter new last name"></div>
+    <div class="field"><label>Effective Date</label><input type="date" name="name_effective_date"></div>
+  </div>
+
+  <div id="marriage-section" class="section">
+    <div class="section-title">💍 Marriage / Life Event</div>
+    <div class="field"><label>Marriage/Event Date</label><input type="date" name="marriage_date"></div>
+    <div class="field"><label>Spouse/Partner Full Name</label><input type="text" name="spouse_name" placeholder="Enter full name"></div>
+    <div class="field"><label>Effective Date for Changes</label><input type="date" name="marriage_effective_date"></div>
+  </div>
+
+  <div id="beneficiary-update-section" class="section">
+    <div class="section-title">👥 Beneficiary Update</div>
+    <div class="field"><label>Beneficiary Full Name</label><input type="text" name="beneficiary_name" placeholder="Enter full name"></div>
+    <div class="field"><label>Relationship</label>
+      <select name="beneficiary_relationship">
+        <option value="">Select...</option>
+        <option>Spouse</option><option>Child</option><option>Parent</option><option>Sibling</option><option>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="emergency-contact-section" class="section">
+    <div class="section-title">🚨 Emergency Contact</div>
+    <div class="field"><label>Contact Full Name</label><input type="text" name="emergency_name" placeholder="Enter full name"></div>
+    <div class="field"><label>Phone Number</label><input type="tel" name="emergency_phone" placeholder="(555) 123-4567"></div>
+    <div class="field"><label>Relationship</label>
+      <select name="emergency_relationship">
+        <option value="">Select...</option>
+        <option>Spouse</option><option>Parent</option><option>Sibling</option><option>Child</option><option>Friend</option><option>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="address-change-section" class="section">
+    <div class="section-title">🏠 Address Change</div>
+    <div class="field"><label>Street Address</label><input type="text" name="street" placeholder="123 Main St"></div>
+    <div class="field"><label>City</label><input type="text" name="city" placeholder="City"></div>
+    <div class="field"><label>State</label><input type="text" name="state" placeholder="State"></div>
+    <div class="field"><label>ZIP Code</label><input type="text" name="zip" placeholder="12345"></div>
+  </div>
+
+  <div class="actions">
+    <button type="submit" class="btn btn-primary">✓ Submit Changes</button>
+    <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+  </div>
+</form>
+
+<div id="status" class="status"></div>
+
+<script>
+/* __WIDGET_BUNDLE__ */
+</script>
+</body>
+</html>

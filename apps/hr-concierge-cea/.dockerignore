@@ -1,0 +1,10 @@
+node_modules
+lib
+.vscode
+.git
+*.md
+env
+infra
+appPackage
+.localConfigs
+.localConfigs.playground

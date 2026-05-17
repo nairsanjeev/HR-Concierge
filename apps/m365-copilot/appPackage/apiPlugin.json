@@ -1,53 +1,268 @@
 {
-  "$schema": "https://aka.ms/json-schemas/copilot/plugin/v2.2/schema.json",
-  "schema_version": "v2.2",
-  "name_for_human": "HR Orchestrator API",
-  "description_for_human": "Execute HR workflows via the agentic orchestration backend",
-  "description_for_model": "Use this plugin to process employee HR requests. It orchestrates multiple specialized AI agents to handle life event processing, personal data changes, and grievance filings. The backend uses Microsoft Agent Framework with AG-UI protocol for real-time streaming.",
-  "contact_email": "hr-ai@contoso.com",
-  "namespace": "hrOrchestrator",
-  "logo_url": "https://contoso.com/logo.png",
-  "legal_info_url": "https://contoso.com/legal",
-  "privacy_policy_url": "https://contoso.com/privacy",
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.4/schema.json",
+  "schema_version": "v2.4",
+  "name_for_human": "HR Concierge",
+  "description_for_human": "AI-powered HR assistant with interactive Workday forms, grievance intake, expense reports, and completion dashboards.",
+  "description_for_model": "HR Concierge connects to an MCP server that provides interactive form widgets for Workday life events, grievance filings, expense reports, and HR policy lookups. Call get_workday_form for personal data changes, get_grievance_form for complaints, get_expense_form for expenses, and query_knowledge_base for policy questions.",
+  "namespace": "hrConcierge",
   "functions": [
     {
-      "name": "processHRRequest",
-      "description": "Process an employee HR request through the agentic orchestration pipeline. Handles life events, personal data changes, and grievance filings.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "description": "The employee's HR request or question"
-          },
-          "scenario": {
-            "type": "string",
-            "enum": ["life-event", "grievance", "auto"],
-            "description": "The type of HR scenario to process. Use 'auto' for automatic detection."
-          }
-        },
-        "required": ["message"]
-      }
+      "name": "get_workday_form",
+      "description": "Shows an interactive Workday form for personal data changes (name change, marriage, beneficiary update, emergency contact, address). Use when an employee describes a life event or wants to update personal information."
     },
     {
-      "name": "getScenarios",
-      "description": "Get the list of supported HR scenarios and their descriptions.",
-      "parameters": {
-        "type": "object",
-        "properties": {}
-      }
+      "name": "update_workday_employee",
+      "description": "Submits a personal data change to Workday HCM. Called from the Workday form widget after the employee fills in details."
+    },
+    {
+      "name": "get_grievance_form",
+      "description": "Shows an interactive confidential grievance intake form. Use when an employee wants to file a workplace concern, complaint, or report an issue."
+    },
+    {
+      "name": "create_grievance_case",
+      "description": "Submits a formal workplace grievance case. Called from the grievance form widget after employee completes intake."
+    },
+    {
+      "name": "get_expense_form",
+      "description": "Shows an interactive expense report form. Use when an employee needs to submit expenses, reimbursement requests, or log business travel costs."
+    },
+    {
+      "name": "submit_expense_report",
+      "description": "Submits expense line items for manager approval. Called from the expense form widget."
+    },
+    {
+      "name": "show_completion_summary",
+      "description": "Shows a dashboard summarizing all workflow actions taken, completed items, and pending items."
+    },
+    {
+      "name": "query_knowledge_base",
+      "description": "Search the HR policy knowledge base for answers about policies, benefits, leave, PTO, health insurance, code of conduct, grievance procedures."
+    },
+    {
+      "name": "retrieve_policy_guidance",
+      "description": "Look up relevant HR policy articles from ServiceNow knowledge base."
+    },
+    {
+      "name": "assess_risk_and_compliance",
+      "description": "Evaluate risk levels for each detected change and determine if approval is needed."
+    },
+    {
+      "name": "build_impact_map",
+      "description": "Generate a dependency/impact map showing which downstream systems are affected by changes."
+    },
+    {
+      "name": "execute_self_service_changes",
+      "description": "Execute low-risk self-service changes immediately (address, emergency contact, preferred name)."
+    },
+    {
+      "name": "structure_narrative",
+      "description": "Convert an unstructured employee narrative into a structured intake summary."
+    },
+    {
+      "name": "submit_high_risk_changes",
+      "description": "Submit high-risk personal data changes (legal name, bank details) that require HR Operations approval."
     }
   ],
   "runtimes": [
     {
-      "type": "OpenApi",
+      "type": "RemoteMCPServer",
       "auth": {
         "type": "None"
       },
+      "run_for_functions": [
+        "get_workday_form",
+        "update_workday_employee",
+        "get_grievance_form",
+        "create_grievance_case",
+        "get_expense_form",
+        "submit_expense_report",
+        "show_completion_summary",
+        "query_knowledge_base",
+        "retrieve_policy_guidance",
+        "assess_risk_and_compliance",
+        "build_impact_map",
+        "execute_self_service_changes",
+        "structure_narrative",
+        "submit_high_risk_changes"
+      ],
       "spec": {
-        "url": "openapi.yaml"
-      },
-      "run_for_functions": ["processHRRequest", "getScenarios"]
+        "url": "https://hr-concierge-mcp.grayplant-4b62ead6.eastus2.azurecontainerapps.io/mcp",
+        "mcp_tool_description": {
+          "tools": [
+            {
+              "name": "get_workday_form",
+              "description": "Show an interactive form for Workday personal data changes (name, marriage, beneficiary, emergency contact, address). Use when an employee needs to update personal information.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "change_types": { "type": "string", "description": "Comma-separated change type IDs: name-change, marriage, beneficiary-update, emergency-contact, address-change" }
+                },
+                "required": ["change_types"]
+              },
+              "annotations": { "readOnlyHint": true },
+              "_meta": { "ui": { "resourceUri": "ui://hr-concierge/workday-form.html", "visibility": ["model"] } }
+            },
+            {
+              "name": "update_workday_employee",
+              "description": "Submit a personal data change to Workday HCM. Called from the Workday form widget after employee fills in their details.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "employee_id": { "type": "string", "description": "Workday employee ID, e.g. 'EMP-001234'" },
+                  "change_type": { "type": "string", "description": "One of: name-change, address-change, emergency-contact, marriage, beneficiary-update" },
+                  "field_data_json": { "type": "string", "description": "JSON object with the field values to update" }
+                },
+                "required": ["employee_id", "change_type", "field_data_json"]
+              }
+            },
+            {
+              "name": "get_grievance_form",
+              "description": "Show an interactive confidential grievance intake form. Use when an employee wants to file a workplace concern, complaint, or report an issue.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "prefill_category": { "type": "string", "description": "Optional category to pre-select: Harassment, Discrimination, Retaliation, Safety Concern, Policy Violation, Workplace Conflict, Other" }
+                }
+              },
+              "annotations": { "readOnlyHint": true },
+              "_meta": { "ui": { "resourceUri": "ui://hr-concierge/grievance-intake.html", "visibility": ["model"] } }
+            },
+            {
+              "name": "create_grievance_case",
+              "description": "Submit a formal workplace grievance case. Called from the grievance form widget after employee completes the intake form.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "category": { "type": "string", "description": "Grievance category" },
+                  "severity": { "type": "string", "description": "Severity: Low, Medium, High, Critical" },
+                  "narrative": { "type": "string", "description": "Description of concern" },
+                  "incident_date": { "type": "string", "description": "Date of incident (YYYY-MM-DD)" },
+                  "location": { "type": "string", "description": "Where it occurred" },
+                  "persons_involved": { "type": "string", "description": "Names of persons involved" },
+                  "witnesses": { "type": "string", "description": "Witness names" },
+                  "desired_outcome": { "type": "string", "description": "Desired resolution" }
+                },
+                "required": ["category", "severity", "narrative"]
+              }
+            },
+            {
+              "name": "get_expense_form",
+              "description": "Show an interactive expense report form. Use when an employee needs to submit expenses, reimbursement requests, or log business travel costs.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "trip_name": { "type": "string", "description": "Optional trip or project name to pre-fill" }
+                }
+              },
+              "annotations": { "readOnlyHint": true },
+              "_meta": { "ui": { "resourceUri": "ui://hr-concierge/expense-report.html", "visibility": ["model"] } }
+            },
+            {
+              "name": "submit_expense_report",
+              "description": "Submit expense line items for manager approval. Called from the expense form widget.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "trip_name": { "type": "string", "description": "Trip or project name" },
+                  "items_json": { "type": "string", "description": "JSON array of expense items with date, category, amount, description" }
+                },
+                "required": ["items_json"]
+              }
+            },
+            {
+              "name": "show_completion_summary",
+              "description": "Show a dashboard summarizing all workflow actions taken, completed items, and pending items.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "workflow_data_json": { "type": "string", "description": "JSON with total, auto_completed, pending_approval, documents_needed, and items array" }
+                },
+                "required": ["workflow_data_json"]
+              },
+              "annotations": { "readOnlyHint": true },
+              "_meta": { "ui": { "resourceUri": "ui://hr-concierge/completion-summary.html", "visibility": ["model"] } }
+            },
+            {
+              "name": "query_knowledge_base",
+              "description": "Search the HR policy knowledge base for answers about policies, benefits, leave, PTO, 401(k), health insurance, code of conduct, etc.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "query": { "type": "string", "description": "Employee's question in natural language" }
+                },
+                "required": ["query"]
+              }
+            },
+            {
+              "name": "retrieve_policy_guidance",
+              "description": "Look up relevant HR policy articles from ServiceNow knowledge base.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "topics": { "type": "string", "description": "Comma-separated keywords, e.g. 'name change, marriage'" }
+                },
+                "required": ["topics"]
+              }
+            },
+            {
+              "name": "assess_risk_and_compliance",
+              "description": "Evaluate risk levels for each detected intent and determine approval requirements.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "intents_json": { "type": "string", "description": "JSON array of intents with risk_level, id, etc." }
+                },
+                "required": ["intents_json"]
+              }
+            },
+            {
+              "name": "build_impact_map",
+              "description": "Generate a dependency/impact map showing which downstream systems are affected.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "intents_json": { "type": "string", "description": "JSON array of intents with downstream_systems" }
+                },
+                "required": ["intents_json"]
+              }
+            },
+            {
+              "name": "execute_self_service_changes",
+              "description": "Execute low-risk self-service changes immediately (address, emergency contact, preferred name).",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "changes_json": { "type": "string", "description": "JSON array of changes to execute" }
+                },
+                "required": ["changes_json"]
+              }
+            },
+            {
+              "name": "structure_narrative",
+              "description": "Convert an unstructured employee narrative into a structured intake summary.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "raw_narrative": { "type": "string", "description": "The employee's unstructured description of their concern" },
+                  "classification_json": { "type": "string", "description": "JSON with categories and severity from initial classification" }
+                },
+                "required": ["raw_narrative", "classification_json"]
+              }
+            },
+            {
+              "name": "submit_high_risk_changes",
+              "description": "Submit high-risk personal data changes for manager approval.",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "changes_summary": { "type": "string", "description": "Summary of changes. Include 'CONFIRMED' and justification to submit." }
+                },
+                "required": ["changes_summary"]
+              }
+            }
+          ]
+        }
+      }
     }
   ]
 }

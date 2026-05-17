@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Concierge MCP — Debug Inspector</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --bg: #1e1e1e; --bg2: #252526; --bg3: #2d2d2d; --border: #3e3e3e; --text: #cccccc; --text2: #9d9d9d; --accent: #0078d4; --green: #4ec9b0; --red: #f14c4c; --yellow: #dcdcaa; --orange: #ce9178; --blue: #569cd6; }
+body { font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: 13px; }
+header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; align-items: center; gap: 12px; }
+header h1 { font-size: 14px; font-weight: 600; color: var(--accent); }
+header .badge { background: var(--green); color: #000; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+header .badge.error { background: var(--red); color: #fff; }
+.tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg2); }
+.tab { padding: 8px 16px; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; font-size: 12px; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+main { flex: 1; overflow: hidden; display: flex; }
+.panel { flex: 1; display: none; overflow: auto; padding: 12px; flex-direction: column; gap: 12px; }
+.panel.active { display: flex; }
+/* Logs panel */
+#logs-panel { padding: 0; }
+#log-container { flex: 1; overflow-y: auto; font-size: 12px; padding: 8px; }
+.log-entry { padding: 4px 8px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-start; }
+.log-entry:hover { background: var(--bg3); }
+.log-ts { color: var(--text2); white-space: nowrap; min-width: 90px; font-size: 11px; }
+.log-dir { font-weight: 700; min-width: 20px; }
+.log-dir.in { color: var(--green); }
+.log-dir.out { color: var(--orange); }
+.log-method { color: var(--blue); font-weight: 600; min-width: 160px; }
+.log-detail { color: var(--text2); word-break: break-all; flex: 1; }
+.log-controls { display: flex; gap: 8px; padding: 8px 12px; background: var(--bg2); border-bottom: 1px solid var(--border); align-items: center; }
+.log-controls button { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+.log-controls button:hover { background: var(--accent); color: #fff; }
+.log-count { color: var(--text2); font-size: 11px; margin-left: auto; }
+/* Tools panel */
+.tool-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+.tool-card h3 { color: var(--green); font-size: 13px; margin-bottom: 4px; }
+.tool-card .desc { color: var(--text2); font-size: 12px; margin-bottom: 8px; }
+.tool-card .meta { font-size: 11px; color: var(--yellow); background: var(--bg3); padding: 4px 8px; border-radius: 4px; margin-bottom: 8px; display: inline-block; }
+.tool-card .schema { font-size: 11px; color: var(--text2); }
+.tool-card .test-area { margin-top: 8px; display: flex; gap: 8px; align-items: center; }
+.tool-card input, .tool-card textarea { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 8px; border-radius: 4px; font-family: inherit; font-size: 12px; flex: 1; }
+.tool-card button { background: var(--accent); border: none; color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+.tool-result { margin-top: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 8px; font-size: 11px; max-height: 200px; overflow: auto; white-space: pre-wrap; }
+/* Resources panel */
+.resource-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+.resource-card h3 { color: var(--orange); font-size: 13px; }
+.resource-card .uri { color: var(--text2); font-size: 11px; margin: 4px 0; }
+.resource-card .mime { color: var(--yellow); font-size: 11px; }
+.resource-card button { margin-top: 8px; background: var(--accent); border: none; color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+/* Widget preview */
+#widget-container { width: 100%; height: 400px; border: 1px solid var(--border); border-radius: 4px; margin-top: 8px; background: #fff; }
+/* Sessions */
+.session-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
+.session-id { color: var(--blue); font-size: 12px; }
+.session-info { color: var(--text2); font-size: 11px; }
+/* Status bar */
+.status-bar { background: var(--accent); padding: 3px 12px; font-size: 11px; display: flex; gap: 16px; color: #fff; }
+.status-bar .item { display: flex; gap: 4px; align-items: center; }
+/* Split layout for tools */
+.split { display: flex; gap: 12px; flex: 1; overflow: hidden; }
+.split-left { width: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.split-right { flex: 1; overflow-y: auto; }
+.tool-list-item { padding: 8px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+.tool-list-item:hover, .tool-list-item.selected { border-color: var(--accent); background: var(--bg3); }
+.tool-list-item .name { color: var(--green); font-size: 12px; font-weight: 600; }
+.tool-list-item .type { color: var(--text2); font-size: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔍 HR Concierge MCP Inspector</h1>
+  <span class="badge" id="status-badge">Connecting...</span>
+  <span style="color:var(--text2);font-size:11px" id="server-info"></span>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-panel="logs">📋 Live Logs</div>
+  <div class="tab" data-panel="tools">🔧 Tools</div>
+  <div class="tab" data-panel="resources">📦 Resources</div>
+  <div class="tab" data-panel="widgets">🖼️ Widget Preview</div>
+  <div class="tab" data-panel="sessions">🔗 Sessions</div>
+</div>
+
+<main>
+  <!-- Live Logs -->
+  <div class="panel active" id="logs-panel">
+    <div class="log-controls">
+      <button id="clear-logs">Clear</button>
+      <button id="pause-logs">Pause</button>
+      <label style="color:var(--text2);font-size:11px;display:flex;align-items:center;gap:4px">
+        <input type="checkbox" id="auto-scroll" checked> Auto-scroll
+      </label>
+      <span class="log-count" id="log-count">0 events</span>
+    </div>
+    <div id="log-container"></div>
+  </div>
+
+  <!-- Tools -->
+  <div class="panel" id="tools-panel">
+    <div class="split">
+      <div class="split-left" id="tool-list"></div>
+      <div class="split-right" id="tool-detail">
+        <div style="color:var(--text2);padding:40px;text-align:center">Select a tool from the list to inspect and test it</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resources -->
+  <div class="panel" id="resources-panel"></div>
+
+  <!-- Widget Preview -->
+  <div class="panel" id="widgets-panel">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <label style="color:var(--text2)">Widget:</label>
+      <select id="widget-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-size:12px"></select>
+      <button onclick="loadWidget()" style="background:var(--accent);border:none;color:#fff;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px">Load</button>
+      <span style="color:var(--text2);font-size:11px;margin-left:auto">Widget is loaded in sandboxed iframe — same as M365 Copilot would render it</span>
+    </div>
+    <iframe id="widget-container" sandbox="allow-scripts allow-forms"></iframe>
+  </div>
+
+  <!-- Sessions -->
+  <div class="panel" id="sessions-panel">
+    <div style="color:var(--text2);margin-bottom:8px">Active MCP sessions on the server:</div>
+    <div id="sessions-list"></div>
+  </div>
+</main>
+
+<div class="status-bar">
+  <div class="item">🟢 Server: <span id="sb-url"></span></div>
+  <div class="item">Sessions: <span id="sb-sessions">0</span></div>
+  <div class="item">Tools: <span id="sb-tools">0</span></div>
+  <div class="item">Resources: <span id="sb-resources">0</span></div>
+</div>
+
+<script>
+(function() {
+  const BASE = location.origin;
+  let logs = [];
+  let paused = false;
+  let mcpSession = null;
+  let toolsData = [];
+  let resourcesData = [];
+
+  // === Tab switching ===
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.panel + '-panel').classList.add('active');
+    });
+  });
+
+  // === SSE Log Stream ===
+  function connectLogs() {
+    const es = new EventSource(BASE + '/debug/logs');
+    es.onopen = () => {
+      document.getElementById('status-badge').textContent = 'Connected';
+      document.getElementById('status-badge').className = 'badge';
+    };
+    es.onmessage = (ev) => {
+      if (paused) return;
+      try {
+        const entry = JSON.parse(ev.data);
+        logs.push(entry);
+        renderLogEntry(entry);
+        document.getElementById('log-count').textContent = logs.length + ' events';
+      } catch(e) {}
+    };
+    es.onerror = () => {
+      document.getElementById('status-badge').textContent = 'Disconnected';
+      document.getElementById('status-badge').className = 'badge error';
+      setTimeout(connectLogs, 3000);
+    };
+  }
+
+  function renderLogEntry(entry) {
+    const container = document.getElementById('log-container');
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    const ts = new Date(entry.ts).toLocaleTimeString();
+    const dir = entry.dir === 'in' ? '→' : '←';
+    const dirClass = entry.dir === 'in' ? 'in' : 'out';
+    div.innerHTML = `<span class="log-ts">${ts}</span><span class="log-dir ${dirClass}">${dir}</span><span class="log-method">${entry.method || ''}</span><span class="log-detail">${escHtml(entry.detail || '')}</span>`;
+    container.appendChild(div);
+    if (document.getElementById('auto-scroll').checked) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  document.getElementById('clear-logs').addEventListener('click', () => {
+    logs = [];
+    document.getElementById('log-container').innerHTML = '';
+    document.getElementById('log-count').textContent = '0 events';
+  });
+  document.getElementById('pause-logs').addEventListener('click', function() {
+    paused = !paused;
+    this.textContent = paused ? 'Resume' : 'Pause';
+  });
+
+  // === MCP Session Helper ===
+  async function ensureSession() {
+    if (mcpSession) return mcpSession;
+    const r = await fetch(BASE + '/mcp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'debug-inspector', version: '1.0' } } })
+    });
+    mcpSession = r.headers.get('mcp-session-id');
+    await consumeSSE(r);
+    // Send initialized notification
+    await fetch(BASE + '/mcp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Mcp-Session-Id': mcpSession },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })
+    });
+    return mcpSession;
+  }
+
+  async function mcpCall(method, params) {
+    const sid = await ensureSession();
+    const r = await fetch(BASE + '/mcp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream', 'Mcp-Session-Id': sid },
+      body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method, params })
+    });
+    return await consumeSSE(r);
+  }
+
+  async function consumeSSE(response) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      // Check if we have a complete SSE event (ends with \n\n)
+      if (buf.includes('\n\n')) {
+        reader.cancel();
+        break;
+      }
+    }
+    const lines = buf.split('\n').filter(l => l.startsWith('data:'));
+    for (const line of lines) {
+      try {
+        const parsed = JSON.parse(line.slice(5));
+        if (parsed.result !== undefined || parsed.error) return parsed;
+      } catch(e) {}
+    }
+    return null;
+  }
+
+  // === Load Tools ===
+  async function loadTools() {
+    const resp = await mcpCall('tools/list', {});
+    if (!resp || !resp.result) return;
+    toolsData = resp.result.tools || [];
+    document.getElementById('sb-tools').textContent = toolsData.length;
+    renderToolList();
+  }
+
+  function renderToolList() {
+    const list = document.getElementById('tool-list');
+    list.innerHTML = '';
+    toolsData.forEach((tool, idx) => {
+      const div = document.createElement('div');
+      div.className = 'tool-list-item';
+      const hasWidget = tool._meta && tool._meta.ui;
+      div.innerHTML = `<div class="name">${hasWidget ? '🖼️ ' : '⚙️ '}${tool.name}</div><div class="type">${hasWidget ? 'Widget Tool' : 'Plain Tool'}</div>`;
+      div.addEventListener('click', () => {
+        document.querySelectorAll('.tool-list-item').forEach(t => t.classList.remove('selected'));
+        div.classList.add('selected');
+        renderToolDetail(tool);
+      });
+      list.appendChild(div);
+    });
+  }
+
+  function renderToolDetail(tool) {
+    const detail = document.getElementById('tool-detail');
+    const hasWidget = tool._meta && tool._meta.ui;
+    const props = tool.inputSchema?.properties || {};
+    const required = tool.inputSchema?.required || [];
+
+    let inputFields = '';
+    Object.entries(props).forEach(([key, schema]) => {
+      const req = required.includes(key) ? ' *' : '';
+      inputFields += `<div style="margin-bottom:6px"><label style="color:var(--text2);font-size:11px">${key}${req} <span style="color:var(--text2)">(${schema.type || 'string'})</span></label><input id="input-${key}" placeholder="${schema.description || ''}" style="width:100%;margin-top:2px"></div>`;
+    });
+
+    detail.innerHTML = `
+      <div class="tool-card" style="border:none;background:transparent;padding:0">
+        <h3>${tool.name}</h3>
+        <div class="desc">${tool.description || ''}</div>
+        ${tool._meta ? `<div class="meta">_meta: ${JSON.stringify(tool._meta)}</div>` : ''}
+        ${tool.annotations ? `<div class="meta" style="color:var(--green)">annotations: ${JSON.stringify(tool.annotations)}</div>` : ''}
+        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+          <div style="font-weight:600;margin-bottom:8px;color:var(--text)">Test this tool:</div>
+          ${inputFields || '<div style="color:var(--text2)">No input parameters</div>'}
+          <button onclick="runTool('${tool.name}')" style="margin-top:8px">▶ Run Tool</button>
+          ${hasWidget ? `<button onclick="runToolWidget('${tool.name}')" style="margin-top:8px;margin-left:8px;background:var(--green);color:#000">🖼️ Run + Preview Widget</button>` : ''}
+        </div>
+        <div id="tool-result-area"></div>
+      </div>
+    `;
+  }
+
+  window.runTool = async function(name) {
+    const tool = toolsData.find(t => t.name === name);
+    if (!tool) return;
+    const props = tool.inputSchema?.properties || {};
+    const args = {};
+    Object.keys(props).forEach(key => {
+      const val = document.getElementById('input-' + key)?.value;
+      if (val) args[key] = val;
+    });
+
+    const resultArea = document.getElementById('tool-result-area');
+    resultArea.innerHTML = '<div style="color:var(--yellow);margin-top:8px">⏳ Calling tool...</div>';
+
+    try {
+      const resp = await mcpCall('tools/call', { name, arguments: args });
+      resultArea.innerHTML = `<div class="tool-result"><strong>Result:</strong>\n${escHtml(JSON.stringify(resp?.result || resp?.error, null, 2))}</div>`;
+    } catch(e) {
+      resultArea.innerHTML = `<div class="tool-result" style="color:var(--red)">Error: ${escHtml(e.message)}</div>`;
+    }
+  };
+
+  window.runToolWidget = async function(name) {
+    const tool = toolsData.find(t => t.name === name);
+    if (!tool || !tool._meta?.ui?.resourceUri) return;
+    // First run the tool
+    await window.runTool(name);
+    // Then load the widget
+    const uri = tool._meta.ui.resourceUri;
+    const resource = resourcesData.find(r => r.uri === uri);
+    if (resource) {
+      document.querySelector('[data-panel="widgets"]').click();
+      document.getElementById('widget-select').value = uri;
+      loadWidget();
+    }
+  };
+
+  // === Load Resources ===
+  async function loadResources() {
+    const resp = await mcpCall('resources/list', {});
+    if (!resp || !resp.result) return;
+    resourcesData = resp.result.resources || [];
+    document.getElementById('sb-resources').textContent = resourcesData.length;
+    renderResources();
+    populateWidgetSelect();
+  }
+
+  function renderResources() {
+    const panel = document.getElementById('resources-panel');
+    panel.innerHTML = '';
+    resourcesData.forEach(res => {
+      const div = document.createElement('div');
+      div.className = 'resource-card';
+      div.innerHTML = `<h3>${res.name}</h3><div class="uri">URI: ${res.uri}</div><div class="mime">MIME: ${res.mimeType || 'unknown'}</div>${res.description ? `<div style="color:var(--text2);font-size:11px;margin-top:4px">${res.description}</div>` : ''}<button onclick="previewResource('${res.uri}')">Preview Widget</button>`;
+      panel.appendChild(div);
+    });
+  }
+
+  function populateWidgetSelect() {
+    const sel = document.getElementById('widget-select');
+    sel.innerHTML = '';
+    resourcesData.forEach(res => {
+      const opt = document.createElement('option');
+      opt.value = res.uri;
+      opt.textContent = res.name + ' (' + res.uri + ')';
+      sel.appendChild(opt);
+    });
+  }
+
+  window.previewResource = async function(uri) {
+    document.querySelector('[data-panel="widgets"]').click();
+    document.getElementById('widget-select').value = uri;
+    loadWidget();
+  };
+
+  window.loadWidget = async function() {
+    const uri = document.getElementById('widget-select').value;
+    if (!uri) return;
+    try {
+      const resp = await mcpCall('resources/read', { uri });
+      if (resp?.result?.contents?.[0]?.text) {
+        const iframe = document.getElementById('widget-container');
+        iframe.srcdoc = resp.result.contents[0].text;
+      }
+    } catch(e) {
+      alert('Failed to load widget: ' + e.message);
+    }
+  };
+
+  // === Sessions ===
+  async function loadSessions() {
+    try {
+      const r = await fetch(BASE + '/debug/sessions');
+      const data = await r.json();
+      document.getElementById('sb-sessions').textContent = data.length;
+      const list = document.getElementById('sessions-list');
+      list.innerHTML = '';
+      data.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'session-item';
+        div.innerHTML = `<span class="session-id">${s.id}</span><span class="session-info">${s.created || ''}</span>`;
+        list.appendChild(div);
+      });
+    } catch(e) {}
+  }
+
+  // === Health Check ===
+  async function checkHealth() {
+    try {
+      const r = await fetch(BASE + '/health');
+      const data = await r.json();
+      document.getElementById('server-info').textContent = `v${data.version} | ${data.widgets?.length || 0} widgets`;
+      document.getElementById('sb-url').textContent = BASE;
+    } catch(e) {
+      document.getElementById('status-badge').textContent = 'Offline';
+      document.getElementById('status-badge').className = 'badge error';
+    }
+  }
+
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // === Boot ===
+  async function boot() {
+    await checkHealth();
+    connectLogs();
+    await ensureSession();
+    await loadTools();
+    await loadResources();
+    await loadSessions();
+    setInterval(loadSessions, 10000);
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

@@ -9,7 +9,8 @@ export type ScreenType =
   | 'data-collection'
   | 'grievance-intake'
   | 'grievance-triage'
-  | 'case-draft';
+  | 'case-draft'
+  | 'expense-collection';
 
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type ActionStatus = 'pending' | 'in-progress' | 'awaiting-approval' | 'completed' | 'blocked' | 'skipped';

@@ -1,0 +1,125 @@
+{
+    "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.26/MicrosoftTeams.schema.json",
+    "manifestVersion": "1.26",
+    "version": "1.0.1",
+    "id": "${{TEAMS_APP_ID}}",
+    "developer": {
+        "name": "HR Concierge",
+        "websiteUrl": "https://www.example.com",
+        "privacyUrl": "https://www.example.com/privacy",
+        "termsOfUseUrl": "https://www.example.com/termofuse"
+    },
+    "icons": {
+        "color": "color.png",
+        "outline": "outline.png"
+    },
+    "name": {
+        "short": "HR Concierge${{APP_NAME_SUFFIX}}",
+        "full": "HR Concierge - Agentic HR Assistant"
+    },
+    "description": {
+        "short": "AI HR assistant for policies, life events & grievances",
+        "full": "HR Concierge is an intelligent agent that helps employees with HR policy guidance, life event changes (name, address, marriage, new baby), benefits updates, grievance filing, and expense report submission. It provides step-by-step guidance with risk assessment and compliance checks."
+    },
+    "accentColor": "#4F46E5",
+    "supportsChannelFeatures": "tier1",
+    "copilotAgents": {
+        "customEngineAgents": [
+            {
+                "type": "bot",
+                "id": "${{BOT_ID}}"
+            }
+        ]
+    },
+    "bots": [
+        {
+            "botId": "${{BOT_ID}}",
+            "scopes": [
+                "copilot",
+                "personal",
+                "team"
+            ],
+            "supportsFiles": false,
+            "isNotificationOnly": false,
+            "commandLists": [
+                {
+                    "scopes": [
+                        "copilot",
+                        "personal"
+                    ],
+                    "commands": [
+                        {
+                            "title": "How can you help me?",
+                            "description": "See what the HR Concierge can help with"
+                        },
+                        {
+                            "title": "I need to change my legal name",
+                            "description": "Start a legal name change process"
+                        },
+                        {
+                            "title": "I just got married",
+                            "description": "Update records after marriage"
+                        },
+                        {
+                            "title": "I'm having a baby",
+                            "description": "Add new dependent and update benefits"
+                        },
+                        {
+                            "title": "Update my address",
+                            "description": "Change your home address in Workday"
+                        },
+                        {
+                            "title": "Update my bank details",
+                            "description": "Change direct deposit information"
+                        },
+                        {
+                            "title": "File a grievance",
+                            "description": "Report a workplace concern confidentially"
+                        },
+                        {
+                            "title": "Submit expense report",
+                            "description": "Submit business expenses for reimbursement"
+                        },
+                        {
+                            "title": "What is our PTO policy?",
+                            "description": "Ask about leave and time-off policies"
+                        },
+                        {
+                            "title": "How do I request FMLA?",
+                            "description": "Learn about family medical leave"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "composeExtensions": [],
+    "configurableTabs": [
+        {
+            "configurationUrl": "https://hr-concierge-web.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io/tab-config",
+            "canUpdateConfiguration": false,
+            "scopes": ["team", "groupChat"]
+        }
+    ],
+    "staticTabs": [
+        {
+            "entityId": "hr-portal",
+            "name": "HR Portal",
+            "contentUrl": "https://hr-concierge-web.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io/portal",
+            "websiteUrl": "https://hr-concierge-web.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io/portal",
+            "scopes": ["personal", "team", "groupChat"]
+        }
+    ],
+    "permissions": [
+        "identity",
+        "messageTeamMembers"
+    ],
+    "validDomains": [
+        "${{BOT_DOMAIN}}",
+        "hr-concierge-web.whiteglacier-f04ad88c.eastus2.azurecontainerapps.io"
+    ],
+    "webApplicationInfo": {
+        "id": "${{BOT_ID}}",
+        "resource": "api://botid-${{BOT_ID}}"
+    }
+}

@@ -8,6 +8,7 @@ import type { ChatMessage } from '../../types/events';
 import type { UIState } from '../../types/ui-state';
 import WorkdayFormPanel from './WorkdayFormPanel';
 import GrievanceIntakePanel from './GrievanceIntakePanel';
+import ExpenseFormPanel from './ExpenseFormPanel';
 
 interface Props {
   messages: ChatMessage[];
@@ -37,7 +38,7 @@ export default function ChatPanel({ messages, isStreaming, onSend, onReset, curr
   };
 
   // Show Gen UI form when screen_type is a form type
-  const showGenUI = uiState.screen_type === 'data-collection' || uiState.screen_type === 'grievance-intake';
+  const showGenUI = uiState.screen_type === 'data-collection' || uiState.screen_type === 'grievance-intake' || uiState.screen_type === 'expense-collection';
 
   return (
     <div className="flex flex-col h-full">
@@ -158,6 +159,7 @@ export default function ChatPanel({ messages, isStreaming, onSend, onReset, curr
 function InlineGenUI({ uiState, onSend, isStreaming }: { uiState: UIState; onSend: (text: string) => void; isStreaming: boolean }) {
   const isDataCollection = uiState.screen_type === 'data-collection';
   const isGrievanceIntake = uiState.screen_type === 'grievance-intake';
+  const isExpenseCollection = uiState.screen_type === 'expense-collection';
 
   // Extract form-eligible intent IDs for WorkdayFormPanel
   const formIntentIds = isDataCollection
@@ -169,7 +171,7 @@ function InlineGenUI({ uiState, onSend, isStreaming }: { uiState: UIState; onSen
     ? uiState.detected_intents.flatMap(i => i.sub_intents || [])
     : [];
 
-  if (!isDataCollection && !isGrievanceIntake) return null;
+  if (!isDataCollection && !isGrievanceIntake && !isExpenseCollection) return null;
   if (isDataCollection && formIntentIds.length === 0) return null;
 
   return (
@@ -184,6 +186,9 @@ function InlineGenUI({ uiState, onSend, isStreaming }: { uiState: UIState; onSen
       )}
       {isGrievanceIntake && (
         <GrievanceIntakePanel onSubmit={onSend} isStreaming={isStreaming} categories={grievanceCategories} />
+      )}
+      {isExpenseCollection && (
+        <ExpenseFormPanel onSubmit={onSend} isStreaming={isStreaming} />
       )}
     </motion.div>
   );

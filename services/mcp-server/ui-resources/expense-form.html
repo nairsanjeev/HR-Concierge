@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expense Report — HR Concierge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { brand: { 500: '#10b981', 600: '#059669', 700: '#047857' } } } }
+    };
+  </script>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; color: #e2e8f0; }
+    .line-item { border: 1px solid #334155; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.5rem; }
+    input, select, textarea { background: #0f172a; border: 1px solid #334155; border-radius: 0.375rem; padding: 0.5rem 0.75rem; width: 100%; color: #e2e8f0; font-size: 0.8rem; }
+    input:focus, select:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.3); }
+    label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; color: #94a3b8; display: block; margin-bottom: 0.15rem; }
+    .required::after { content: ' *'; color: #f87171; }
+    .btn-primary { background: #059669; color: white; padding: 0.625rem 1.25rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer; width: 100%; }
+    .btn-primary:hover { background: #047857; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-add { background: transparent; border: 1px dashed #334155; color: #94a3b8; padding: 0.5rem; border-radius: 0.5rem; width: 100%; cursor: pointer; font-size: 0.8rem; }
+    .btn-add:hover { border-color: #10b981; color: #10b981; }
+    .btn-remove { background: none; border: none; color: #f87171; cursor: pointer; font-size: 0.75rem; padding: 0.25rem; }
+    .receipt-warn { font-size: 0.65rem; color: #fbbf24; }
+    .success-banner { background: #065f46; border: 1px solid #059669; border-radius: 0.5rem; padding: 1rem; margin-top: 1rem; }
+    .total-bar { background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; padding: 0.75rem; display: flex; align-items: center; justify-content: space-between; }
+  </style>
+</head>
+<body class="p-4 max-w-lg mx-auto">
+  <div id="app">
+    <div class="flex items-center gap-2 mb-3">
+      <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+      <h1 class="text-lg font-bold">Expense Report</h1>
+    </div>
+    <p class="text-sm text-slate-400 mb-3">Add your expense line items below. Amounts over $25 require receipts.</p>
+
+    <!-- Trip Name -->
+    <div class="mb-3">
+      <label>Trip / Project Name</label>
+      <input type="text" id="trip-name" placeholder="e.g. Chicago Client Visit Q1 2026" />
+    </div>
+
+    <!-- Line Items -->
+    <div id="items-container"></div>
+    <button class="btn-add mb-3" onclick="addItem()">+ Add Expense Item</button>
+
+    <!-- Total -->
+    <div class="total-bar mb-3">
+      <div>
+        <span class="text-xs text-slate-400">Total</span>
+        <span class="text-lg font-bold ml-2" id="total-amount">$0.00</span>
+      </div>
+      <div class="text-xs text-slate-400" id="approval-level">Auto-approved</div>
+    </div>
+
+    <!-- Submit -->
+    <button id="submit-btn" class="btn-primary" onclick="submitExpenses()" disabled>Submit Expense Report</button>
+    <div id="success" class="success-banner hidden">
+      <p class="font-semibold text-emerald-300">✓ Expense report submitted</p>
+      <p class="text-sm text-emerald-200 mt-1" id="success-msg"></p>
+    </div>
+  </div>
+
+  <script>
+    const CATEGORIES = [
+      { label: 'Meals', value: 'meals' },
+      { label: 'Travel', value: 'travel' },
+      { label: 'Lodging', value: 'lodging' },
+      { label: 'Office Supplies', value: 'office-supplies' },
+      { label: 'Client Entertainment', value: 'client-entertainment' },
+      { label: 'Training', value: 'training' },
+      { label: 'Other', value: 'other' },
+    ];
+
+    let items = [];
+    let itemIdCounter = 0;
+
+    // MCP Apps bridge
+    window.addEventListener('message', (event) => {
+      try {
+        const msg = JSON.parse(typeof event.data === 'string' ? event.data : JSON.stringify(event.data));
+        if (msg.method === 'ui/toolInput' || msg.type === 'tool_input') {
+          const data = msg.params?.input || msg.data;
+          if (data?.trip_name) document.getElementById('trip-name').value = data.trip_name;
+          if (data?.items?.length) {
+            items = [];
+            data.items.forEach(i => addItem(i));
+          }
+        }
+        if (msg.method === 'ui/initialize') {
+          window.parent.postMessage(JSON.stringify({
+            jsonrpc: '2.0', id: msg.id, result: { capabilities: {} }
+          }), '*');
+        }
+      } catch (e) { /* ignore */ }
+    });
+
+    // OpenAI Apps SDK bridge (for M365 Copilot)
+    if (window.openai?.toolInput) {
+      const data = window.openai.toolInput;
+      if (data?.trip_name) document.getElementById('trip-name').value = data.trip_name;
+      if (data?.items?.length) {
+        data.items.forEach(i => addItem(i));
+      }
+    }
+
+    function addItem(preset) {
+      const id = itemIdCounter++;
+      const item = {
+        id, date: preset?.date || new Date().toISOString().slice(0, 10),
+        category: preset?.category || '', amount: preset?.amount || '',
+        description: preset?.description || '', hasReceipt: preset?.hasReceipt || false,
+      };
+      items.push(item);
+      renderItems();
+    }
+
+    function removeItem(id) {
+      items = items.filter(i => i.id !== id);
+      renderItems();
+    }
+
+    function renderItems() {
+      const container = document.getElementById('items-container');
+      container.innerHTML = items.map((item, idx) => `
+        <div class="line-item" data-id="${item.id}">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-500 uppercase">Item ${idx + 1}</span>
+            ${items.length > 1 ? `<button class="btn-remove" onclick="removeItem(${item.id})">✕ Remove</button>` : ''}
+          </div>
+          <div class="grid grid-cols-3 gap-2 mb-2">
+            <div>
+              <label class="required">Date</label>
+              <input type="date" value="${item.date}" onchange="updateItem(${item.id}, 'date', this.value)" />
+            </div>
+            <div>
+              <label class="required">Category</label>
+              <select onchange="updateItem(${item.id}, 'category', this.value)">
+                <option value="">Select…</option>
+                ${CATEGORIES.map(c => `<option value="${c.value}" ${c.value === item.category ? 'selected' : ''}>${c.label}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="required">Amount ($)</label>
+              <input type="number" step="0.01" min="0" value="${item.amount}" placeholder="0.00"
+                     oninput="updateItem(${item.id}, 'amount', this.value)" />
+            </div>
+          </div>
+          <div class="mb-2">
+            <label class="required">Description</label>
+            <input type="text" value="${item.description}" placeholder="Business purpose…"
+                   oninput="updateItem(${item.id}, 'description', this.value)" />
+          </div>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" ${item.hasReceipt ? 'checked' : ''} onchange="updateItem(${item.id}, 'hasReceipt', this.checked)" class="rounded" />
+            <span class="text-xs text-slate-400">I have a receipt</span>
+            ${!item.hasReceipt && parseFloat(item.amount) >= 25 ? '<span class="receipt-warn">⚠ Required for ≥$25</span>' : ''}
+          </label>
+        </div>
+      `).join('');
+      updateTotal();
+    }
+
+    function updateItem(id, field, value) {
+      const item = items.find(i => i.id === id);
+      if (item) item[field] = value;
+      if (field === 'amount' || field === 'hasReceipt') renderItems();
+      updateTotal();
+    }
+
+    function updateTotal() {
+      const total = items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+      document.getElementById('total-amount').textContent = `$${total.toFixed(2)}`;
+
+      let level = 'Auto-approved';
+      if (total >= 500 && total < 2000) level = 'Manager approval';
+      else if (total >= 2000 && total < 10000) level = 'VP approval';
+      else if (total >= 10000) level = 'CFO approval';
+      document.getElementById('approval-level').textContent = level;
+
+      const valid = items.length > 0 && items.every(i => i.category && i.amount && i.description);
+      document.getElementById('submit-btn').disabled = !valid;
+    }
+
+    function submitExpenses() {
+      const total = items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+      const tripName = document.getElementById('trip-name').value;
+      const payload = {
+        trip_name: tripName,
+        items: items.map(i => ({
+          date: i.date,
+          category: i.category,
+          amount: parseFloat(i.amount),
+          description: i.description,
+          has_receipt: i.hasReceipt,
+        })),
+        total: total,
+      };
+
+      // Send via MCP Apps bridge
+      if (window.openai?.sendFollowUpMessage) {
+        const msg = `I'd like to submit an expense report${tripName ? ` for "${tripName}"` : ''}.\n` +
+          items.map((i, idx) => `Item ${idx+1}: ${i.category} - $${parseFloat(i.amount).toFixed(2)} - ${i.description} (${i.hasReceipt ? 'receipt: yes' : 'no receipt'})`).join('\n') +
+          `\nTotal: $${total.toFixed(2)}`;
+        window.openai.sendFollowUpMessage({ prompt: msg });
+      } else {
+        // Fallback: postMessage to host
+        window.parent.postMessage(JSON.stringify({
+          type: 'tool_output',
+          data: payload,
+        }), '*');
+      }
+
+      // Show success
+      document.getElementById('submit-btn').disabled = true;
+      document.getElementById('success').classList.remove('hidden');
+      document.getElementById('success-msg').textContent = `${items.length} items totaling $${total.toFixed(2)} sent to agent for validation.`;
+    }
+
+    // Start with one empty item
+    addItem();
+  </script>
+</body>
+</html>

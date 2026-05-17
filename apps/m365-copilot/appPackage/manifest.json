@@ -1,8 +1,8 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
-  "manifestVersion": "devPreview",
-  "version": "1.0.0",
-  "id": "{{APP_ID}}",
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.24/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.24",
+  "version": "1.0.11",
+  "id": "${{TEAMS_APP_ID}}",
   "developer": {
     "name": "Contoso HR",
     "websiteUrl": "https://contoso.com",
@@ -10,12 +10,12 @@
     "termsOfUseUrl": "https://contoso.com/terms"
   },
   "name": {
-    "short": "HR Concierge Agent",
-    "full": "HR Concierge Agentic System"
+    "short": "HR Concierge${{APP_NAME_SUFFIX}}",
+    "full": "HR Concierge MCP App — Agentic HR System"
   },
   "description": {
-    "short": "AI-powered HR assistant with agentic tool orchestration",
-    "full": "An enterprise HR concierge built on Microsoft Agent Framework that orchestrates multiple specialized AI agents to handle life events, personal data changes, and grievance filings — with human-in-the-loop checkpoints for sensitive actions."
+    "short": "AI-powered HR assistant with interactive Workday forms powered by MCP Apps",
+    "full": "An enterprise HR concierge powered by MCP Apps that renders interactive Workday forms, grievance intake, and completion dashboards directly in Copilot Chat. Handles life events, personal data changes, and grievance filings with agentic tool orchestration."
   },
   "icons": {
     "color": "color.png",
@@ -35,7 +35,6 @@
     "messageTeamMembers"
   ],
   "validDomains": [
-    "*.contoso.com",
-    "*.microsoft.com"
+    "hr-concierge-mcp.grayplant-4b62ead6.eastus2.azurecontainerapps.io"
   ]
 }

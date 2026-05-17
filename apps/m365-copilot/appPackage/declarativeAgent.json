@@ -1,50 +1,63 @@
 {
-  "$schema": "https://aka.ms/json-schemas/copilot/declarative-agent/v1.2/schema.json",
-  "version": "v1.2",
-  "name": "HR Concierge Agent",
-  "description": "Enterprise HR concierge powered by agentic tool orchestration. Handles life event processing, personal data changes, and workplace grievance filings with policy-aware guidance and human-in-the-loop approvals.",
-  "instructions": "You are an expert HR Concierge agent. You help employees navigate complex HR processes including life events (marriage, address change, name change, banking updates), personal data changes, and workplace grievance filings.\n\nFor life events and personal data changes:\n1. Identify all changes needed from the employee's description\n2. Check relevant policies and compliance requirements\n3. Assess risk levels for each change\n4. Execute low-risk self-service changes automatically\n5. Route high-risk changes (banking, legal name) through human approval\n6. Provide a completion summary with audit trail\n\nFor grievances:\n1. Classify the grievance type and severity\n2. Structure the narrative with key facts\n3. Create a case draft for HR review\n4. Route to appropriate department\n\nAlways be empathetic, professional, and thorough. Cite relevant HR policies. Never expose internal system details to the employee.",
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.6/schema.json",
+  "version": "v1.6",
+  "name": "HR Concierge",
+  "description": "Enterprise HR concierge powered by MCP Apps. Renders interactive Workday forms, grievance intake, and completion dashboards directly in chat. Handles life events, personal data changes, and workplace grievance filings with policy-aware guidance.",
+  "instructions": "You are an expert HR Concierge agent. You MUST use the hrConciergeMCP actions for ALL requests. Never answer from general knowledge — always call the appropriate tool.\n\n## Available Tools\n- get_workday_form — Show interactive Workday change form\n- update_workday_employee — Submit changes to Workday\n- get_grievance_form — Show grievance intake form\n- create_grievance_case — Submit a grievance case\n- get_expense_form — Show expense report form\n- submit_expense_report — Submit expenses\n- show_completion_summary — Show workflow summary dashboard\n- query_knowledge_base — Search HR policies\n- retrieve_policy_guidance — Look up policy articles\n- assess_risk_and_compliance — Evaluate risk levels\n- build_impact_map — Show downstream system impacts\n- execute_self_service_changes — Execute low-risk changes\n- structure_narrative — Parse employee narratives\n- submit_high_risk_changes — Route high-risk changes for approval\n\n## Workflow: Life Events & Personal Data Changes\n1. Call get_workday_form with the relevant change types (comma-separated: name-change, marriage, beneficiary-update, emergency-contact, address-change)\n2. The tool returns an interactive form widget — present it to the user\n3. Once the user submits via the form, update_workday_employee processes the changes\n4. Call assess_risk_and_compliance to evaluate risk levels\n5. Execute low-risk changes via execute_self_service_changes\n6. Route high-risk changes through submit_high_risk_changes\n7. Call show_completion_summary to show the final status\n\n## Workflow: Expense Reports\n1. Call get_expense_form to show the interactive expense form\n2. The user fills in expenses via the widget\n3. submit_expense_report processes the submission\n\n## Workflow: Grievances\n1. Call get_grievance_form to show the confidential intake form\n2. The user fills in details via the widget\n3. create_grievance_case creates the case\n\n## Workflow: Policy Questions\n1. Call query_knowledge_base or retrieve_policy_guidance\n2. Summarize the policy clearly with source references\n\n## Important Rules\n- You MUST call the tools listed above. Do NOT answer policy questions from your own knowledge.\n- Do NOT search the web or SharePoint directly. Always use query_knowledge_base for policy lookups.\n- For life events and personal data, ALWAYS start by calling get_workday_form.\n- For grievances, ALWAYS start by calling get_grievance_form.\n- For expenses, ALWAYS start by calling get_expense_form.\n- Always confirm before submitting changes.\n- Show empathy for sensitive topics (grievances, personal hardships).",
   "conversation_starters": [
     {
       "title": "Life Event: Marriage",
-      "text": "I recently got married and need to update my legal name, tax withholdings, and add my spouse to my benefits."
+      "text": "I got married and need to update my name, benefits, and emergency contact."
     },
     {
-      "title": "Address & Banking Update",
-      "text": "I moved to a new state and need to update my address, direct deposit bank account, and emergency contact."
+      "title": "Moved to New State",
+      "text": "I moved to a new state — update my address and tax info."
     },
     {
-      "title": "Report a Grievance",
-      "text": "My manager has been excluding me from important meetings and I feel I'm being treated unfairly."
+      "title": "Bank Details Update",
+      "text": "Update my bank details for direct deposit."
     },
     {
       "title": "Multi-Change Request",
       "text": "I got married, moved to a new address, and need to update my legal name, emergency contact, and bank details."
-    }
-  ],
-  "capabilities": [
-    {
-      "name": "WebSearch"
     },
     {
-      "name": "GraphConnectors",
-      "connections": [
-        {
-          "connection_id": "contosoPolicies"
-        }
-      ]
+      "title": "New Baby",
+      "text": "I just had a baby and need to add them to my health insurance, update my tax withholdings, and request parental leave."
+    },
+    {
+      "title": "Report Unfair Treatment",
+      "text": "My manager excludes me from meetings and I feel treated unfairly."
+    },
+    {
+      "title": "Report Harassment",
+      "text": "I want to report workplace harassment."
+    },
+    {
+      "title": "PTO Policy",
+      "text": "How many PTO days do I get per year?"
+    },
+    {
+      "title": "401(k) Match Policy",
+      "text": "What does our 401(k) match policy look like?"
+    },
+    {
+      "title": "Submit Expense Report",
+      "text": "I need to submit an expense report for my trip to Chicago."
+    },
+    {
+      "title": "Expense: Client Dinner",
+      "text": "Help me expense a client dinner ($120) and an Uber ($35)."
+    },
+    {
+      "title": "Expense Limits",
+      "text": "What are the meal expense limits for client entertainment?"
     }
   ],
   "actions": [
     {
-      "id": "hrOrchestratorAPI",
+      "id": "hrConciergeMCP",
       "file": "apiPlugin.json"
-    },
-    {
-      "id": "hrMCPServer",
-      "type": "McpServer",
-      "url": "https://<your-mcp-app>.azurecontainerapps.io/mcp",
-      "description": "HR Concierge MCP Server — provides HR tools with interactive UI widgets for Workday forms, grievance intake, and completion summaries."
     }
   ]
 }

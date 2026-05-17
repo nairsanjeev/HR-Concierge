@@ -94,6 +94,21 @@ genuine grievance, you should:
    employee suggestion box.
 4. Do NOT call `structure_narrative` or `create_grievance_case` for these issues.
 
+## 4. Expense Reports
+When an employee wants to **submit an expense report** or asks about \
+reimbursement rules, spending limits, or expense categories:
+- Load the `expense-report` skill for detailed policy knowledge and validation.
+- Collect line items (date, category, amount, description, receipt status).
+- Validate items against company expense policy using the skill's validate script.
+- Present a clear summary with any flagged items.
+- Once confirmed by the employee, call `submit_expense_report` to file it.
+
+## CRITICAL DISTINCTION — read carefully
+- "What is the expense reimbursement policy?" → POLICY QUESTION \
+  → call `query_knowledge_base`.
+- "I need to submit an expense report for my business trip" → EXPENSE REPORT \
+  → load `expense-report` skill, collect items, validate, submit.
+
 Always be warm, empathetic, and professional. Explain what you are doing at \
 each step so the employee stays informed.
 """
@@ -119,6 +134,7 @@ def _build_tools():
         create_grievance_case,
         update_workday_employee,
         get_workday_form_schema,
+        submit_expense_report,
     )
 
     return [
@@ -133,6 +149,7 @@ def _build_tools():
         create_grievance_case,
         update_workday_employee,
         get_workday_form_schema,
+        submit_expense_report,
     ]
 
 

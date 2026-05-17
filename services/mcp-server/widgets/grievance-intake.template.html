@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grievance Intake Form</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', -apple-system, sans-serif; background: #fff; color: #242424; padding: 16px; line-height: 1.5; }
+h2 { font-size: 18px; font-weight: 600; margin-bottom: 4px; color: #0f6cbd; }
+.subtitle { font-size: 13px; color: #616161; margin-bottom: 16px; }
+.section { margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 8px; border: 1px solid #e0e0e0; }
+.section-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #242424; }
+.field { margin-bottom: 10px; }
+.field label { display: block; font-size: 12px; font-weight: 500; color: #424242; margin-bottom: 3px; }
+.field input, .field select, .field textarea { width: 100%; padding: 8px 10px; border: 1px solid #d1d1d1; border-radius: 4px; font-size: 14px; font-family: inherit; }
+.field textarea { min-height: 100px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #0f6cbd; box-shadow: 0 0 0 1px #0f6cbd; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-primary { background: #0f6cbd; color: #fff; }
+.btn-primary:hover { background: #0a5199; }
+.btn-secondary { background: #f0f0f0; color: #424242; border: 1px solid #d1d1d1; }
+.actions { display: flex; gap: 8px; margin-top: 16px; }
+.status { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 13px; display: none; }
+.status.success { display: block; background: #dff6dd; color: #0e700e; border: 1px solid #9ee09e; }
+.status.error { display: block; background: #fde7e9; color: #c50f1f; border: 1px solid #f1bbbc; }
+.hidden { display: none; }
+.confidential { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 12px; color: #664d03; }
+</style>
+</head>
+<body>
+<h2>Confidential Grievance Intake</h2>
+<p class="subtitle" id="subtitle">Complete this confidential form. All information is kept strictly private.</p>
+
+<div class="confidential">🔒 This form is strictly confidential. Information is only shared with authorized HR case managers.</div>
+
+<form id="form">
+  <div id="form-content">
+    <div class="section">
+      <div class="section-title">Classification</div>
+      <div class="field"><label>Category *</label>
+        <select name="category">
+          <option value="">Select category...</option>
+          <option value="Harassment">Harassment</option>
+          <option value="Discrimination">Discrimination</option>
+          <option value="Retaliation">Retaliation</option>
+          <option value="Safety Concern">Safety Concern</option>
+          <option value="Policy Violation">Policy Violation</option>
+          <option value="Workplace Conflict">Workplace Conflict</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Severity *</label>
+        <select name="severity">
+          <option value="">Select severity...</option>
+          <option value="Low">Low — Minor concern</option>
+          <option value="Medium">Medium — Recurring or impactful</option>
+          <option value="High">High — Serious violation</option>
+          <option value="Critical">Critical — Immediate safety risk</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Details</div>
+      <div class="field"><label>Description of Concern *</label><textarea name="narrative" placeholder="Please describe what happened..."></textarea></div>
+      <div class="field"><label>Date of Incident</label><input type="date" name="incident_date"></div>
+      <div class="field"><label>Location</label><input type="text" name="location" placeholder="Where did it occur?"></div>
+      <div class="field"><label>Persons Involved</label><input type="text" name="persons_involved" placeholder="Names (optional)"></div>
+      <div class="field"><label>Witnesses</label><input type="text" name="witnesses" placeholder="Names (optional)"></div>
+      <div class="field"><label>Desired Outcome</label><input type="text" name="desired_outcome" placeholder="What resolution do you seek?"></div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary">🔒 Submit Grievance</button>
+      <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+    </div>
+  </div>
+</form>
+
+<div id="status" class="status"></div>
+
+<script>
+/* __WIDGET_BUNDLE__ */
+</script>
+</body>
+</html>

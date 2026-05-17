@@ -406,12 +406,17 @@ function synthesizeUIState(
   const hasGrievanceFiling = completedSteps.some(s => s.includes('grievance') && s.includes('filing'));
   const hasGrievanceIntake = completedSteps.some(s => s.includes('grievance') && s.includes('intake'));
 
+  // Expense-report skill detection
+  const hasExpenseSkill = completedSteps.some(s => s.includes('expense') || s.includes('load_skill'));
+
   // Fallback: detect from text content when step names are numeric/unknown
   // Normalize smart quotes/apostrophes to ASCII for reliable matching
   const lower = allText.toLowerCase().replace(/[\u2018\u2019\u201A\u201B]/g, "'");
   const textHasIntents = lower.includes('identified') && (lower.includes('intent') || lower.includes('change') || lower.includes('update'));
   const textHasRisk = lower.includes('risk') && (lower.includes('assessment') || lower.includes('level') || lower.includes('compliance'));
   const textHasComplete = lower.includes('completed') && (lower.includes('change') || lower.includes('update') || lower.includes('processed'));
+  const textHasExpense = lower.includes('expense report') || lower.includes('expense submission')
+    || (lower.includes('expense') && (lower.includes('submit') || lower.includes('reimburse') || lower.includes('receipt')));
   // Only treat as grievance if the LLM actually called grievance tools (step-based),
   // NOT from text content alone — the word "grievance" appears in rejection text too
   const textHasGrievance = false; // Disabled: text-based grievance detection caused false positives on rejections
@@ -447,6 +452,25 @@ function synthesizeUIState(
   // Show the Workday data-collection form as soon as intents are detected
   // and the workflow hasn't reached the final summary yet.
   const isDataCollectionPhase = hasFormIntents && !hasSummary && !isGrievancePhase && (isWorkdayPhase || isRiskPhase || hasChangeExecution || hasWorkdaySubmission);
+
+  // --- Expense Report → show expense collection form ---
+  const isExpensePhase = (hasExpenseSkill || textHasExpense) && !hasSummary && !textHasComplete;
+  if (isExpensePhase) {
+    return {
+      screen_type: 'expense-collection',
+      title: 'Expense Report',
+      subtitle: 'Enter your expenses below',
+      detected_intents: [{
+        id: 'expense-report',
+        label: 'Expense Report Submission',
+        category: 'expense',
+        confidence: 0.9,
+        sub_intents: [],
+        risk_level: 'low',
+        auto_completable: false,
+      }],
+    };
+  }
 
   if (isDataCollectionPhase) {
     return {
