@@ -41,51 +41,59 @@ def query_knowledge_base(query: str) -> str:
     *query* is the employee's question in natural language.
     Returns the grounded answer text from SharePoint HR policy documents.
     """
-    import asyncio
     import httpx
 
     if not settings.azure_search_endpoint or not settings.azure_search_api_key:
+        logger.error("Knowledge base not configured: endpoint=%s, key=%s", settings.azure_search_endpoint, bool(settings.azure_search_api_key))
         return json.dumps({"answer": None, "error": "Knowledge base not configured"})
 
     url = (
-        f"{settings.azure_search_endpoint}/knowledgebases/"
-        f"{settings.azure_search_knowledge_base}/retrieve"
-        f"?api-version=2025-11-01-preview"
+        f"{settings.azure_search_endpoint}/indexes/"
+        f"{settings.azure_search_knowledge_base}/docs/search"
+        f"?api-version=2024-07-01"
     )
+    logger.info(f"Knowledge base query: url={url}, query={query[:50]}")
     body = {
-        "messages": [
-            {"role": "user", "content": [{"type": "text", "text": query}]}
-        ],
+        "search": query,
+        "queryType": "semantic",
+        "semanticConfiguration": "hr-sharepoint-knowledge-source-semantic-configuration",
+        "captions": "extractive",
+        "answers": "extractive",
+        "top": 5,
+        "select": "snippet,doc_url",
     }
     headers = {
         "Content-Type": "application/json",
         "api-key": settings.azure_search_api_key,
     }
 
-    async def _call():
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(url, json=body, headers=headers)
-            resp.raise_for_status()
-            return resp.json()
-
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                data = pool.submit(asyncio.run, _call()).result()
-        else:
-            data = asyncio.run(_call())
+        with httpx.Client(timeout=60.0) as client:
+            resp = client.post(url, json=body, headers=headers)
+            logger.info(f"Knowledge base response status: {resp.status_code}")
+            resp.raise_for_status()
+            data = resp.json()
 
-        response_msgs = data.get("response", [])
-        if response_msgs:
-            content_parts = response_msgs[0].get("content", [])
-            if content_parts:
-                answer = content_parts[0].get("text", "")
-                if answer:
-                    return json.dumps({"answer": answer, "source": "SharePoint HR Policy Knowledge Base"})
+        # Extract semantic answers if available
+        answers = data.get("@search.answers", [])
+        if answers:
+            answer_text = answers[0].get("text", "")
+            if answer_text:
+                logger.info(f"Knowledge base: returning semantic answer ({len(answer_text)} chars)")
+                return json.dumps({"answer": answer_text, "source": "SharePoint HR Policy Knowledge Base"})
+
+        # Fall back to top search results
+        results = data.get("value", [])
+        if results:
+            snippets = [r.get("snippet", "") for r in results[:3] if r.get("snippet")]
+            if snippets:
+                combined = "\n\n".join(snippets)
+                logger.info(f"Knowledge base: returning {len(snippets)} snippets")
+                return json.dumps({"answer": combined, "source": "SharePoint HR Policy Knowledge Base"})
+        
+        logger.warning(f"Knowledge base: no results in response. Keys: {list(data.keys())}")
     except Exception as e:
-        logger.warning(f"Knowledge base query failed: {e}")
+        logger.error(f"Knowledge base query failed: {type(e).__name__}: {e}")
 
     return json.dumps({"answer": None, "source": "SharePoint HR Policy Knowledge Base", "note": "No matching documents found"})
 

@@ -66,7 +66,7 @@ export default function OrchestrationPanel({ uiState, agentActivity, toolCalls, 
                       </span>
                       <span className="text-[9px] text-[var(--text-muted)] ml-auto">{rd.timestamp}</span>
                     </div>
-                    <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">{rd.reason}</p>
+                    <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line">{rd.reason}</p>
                     {(rd as any).route && (
                       <div className="flex items-center gap-1.5 mt-2">
                         <Route className="w-3 h-3 text-[var(--text-muted)]" />

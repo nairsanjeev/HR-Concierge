@@ -23,7 +23,7 @@ from pathlib import Path
 
 from agent_framework import Agent, SkillsProvider
 from agent_framework_openai import OpenAIChatCompletionClient
-from agent_framework_ag_ui import add_agent_framework_fastapi_endpoint
+from agent_framework_ag_ui import add_agent_framework_fastapi_endpoint, AGUIRequest, AgentFrameworkAgent
 
 from config import settings
 from agents import HR_CONCIERGE_PROMPT, TOOLS
@@ -94,14 +94,139 @@ hr_concierge = Agent(
     default_options={"temperature": 0.3},
 )
 
-# ── AG-UI Endpoint (framework handles the loop, streaming, and tool execution)
+# ── AG-UI Endpoint (custom wrapper to inject routing_decision events) ────────
 
-add_agent_framework_fastapi_endpoint(
-    app,
-    hr_concierge,
-    path="/api/agent",
-    allow_origins=settings.cors_origin_list,
+from collections.abc import AsyncGenerator
+from ag_ui.core import CustomEvent, RunErrorEvent
+from ag_ui.encoder import EventEncoder
+
+# Build the framework protocol runner for streaming
+_protocol_runner = AgentFrameworkAgent(agent=hr_concierge)
+
+CLASSIFICATION_SYSTEM = (
+    "You are an intent classifier for an HR Concierge system. "
+    "Given the user message, output EXACTLY 4 lines:\n"
+    "Classification: <category> (Policy Question / Life Event / Grievance / Trivial Complaint / Expense Report)\n"
+    "Severity: <severity or N/A>\n"
+    "Reasoning: <one sentence why>\n"
+    "Action: <what tools/actions will be taken>\n\n"
+    "Be concise. One line each. No markdown formatting."
 )
+
+
+@app.post("/api/agent", tags=["AG-UI"], response_model=None)
+async def agent_endpoint_with_reasoning(request_body: AGUIRequest) -> StreamingResponse:
+    """AG-UI endpoint that emits a routing_decision CUSTOM event before agent response."""
+
+    # Extract last user message for classification
+    user_message = ""
+    for msg in reversed(request_body.messages or []):
+        if msg.get("role") in ("human", "user"):
+            content = msg.get("content", "")
+            if isinstance(content, str):
+                user_message = content
+            elif isinstance(content, list):
+                user_message = " ".join(
+                    p.get("text", "") for p in content if p.get("type") == "text"
+                )
+            break
+
+    # Quick classification call (non-streaming, fast)
+    classification = None
+    if user_message:
+        try:
+            cls_resp = _sync_openai.chat.completions.create(
+                model=settings.azure_openai_model,
+                messages=[
+                    {"role": "system", "content": CLASSIFICATION_SYSTEM},
+                    {"role": "user", "content": user_message},
+                ],
+                temperature=0.1,
+                max_completion_tokens=150,
+            )
+            cls_text = cls_resp.choices[0].message.content or ""
+            # Parse the 4 lines into a structured routing decision
+            lines = [l.strip() for l in cls_text.strip().split("\n") if l.strip()]
+            decision_parts = {}
+            for line in lines:
+                if line.lower().startswith("classification:"):
+                    decision_parts["classification"] = line.split(":", 1)[1].strip()
+                elif line.lower().startswith("severity:"):
+                    decision_parts["severity"] = line.split(":", 1)[1].strip()
+                elif line.lower().startswith("reasoning:"):
+                    decision_parts["reasoning"] = line.split(":", 1)[1].strip()
+                elif line.lower().startswith("action:"):
+                    decision_parts["action"] = line.split(":", 1)[1].strip()
+
+            if decision_parts.get("classification"):
+                # Determine decision type for UI coloring
+                cls_lower = decision_parts["classification"].lower()
+                if "trivial" in cls_lower or "not" in cls_lower:
+                    decision_type = "grievance_rejected"
+                elif "grievance" in cls_lower:
+                    decision_type = "grievance_accepted"
+                elif "life event" in cls_lower:
+                    decision_type = "life_event"
+                elif "expense" in cls_lower:
+                    decision_type = "expense_report"
+                else:
+                    decision_type = "knowledge_retrieval"
+
+                reason_text = (
+                    f"Classification: {decision_parts.get('classification', 'Unknown')}\n"
+                    f"Severity: {decision_parts.get('severity', 'N/A')}\n"
+                    f"Reasoning: {decision_parts.get('reasoning', '')}\n"
+                    f"Action: {decision_parts.get('action', '')}"
+                )
+                classification = {
+                    "decision": decision_type,
+                    "reason": reason_text,
+                }
+        except Exception as e:
+            logger.warning(f"Classification call failed (non-fatal): {e}")
+
+    async def event_generator() -> AsyncGenerator[str]:
+        encoder = EventEncoder()
+
+        # Emit routing_decision CUSTOM event FIRST
+        if classification:
+            routing_event = CustomEvent(
+                name="routing_decision",
+                value=classification,
+            )
+            yield encoder.encode(routing_event)
+
+        # Then stream the full agent response from the framework
+        input_data = request_body.model_dump(exclude_none=True)
+        try:
+            async for event in _protocol_runner.run(input_data):
+                try:
+                    yield encoder.encode(event)
+                except Exception as encode_error:
+                    logger.exception("Failed to encode event")
+                    run_error = RunErrorEvent(
+                        message="An internal error has occurred while streaming events.",
+                        code=type(encode_error).__name__,
+                    )
+                    yield encoder.encode(run_error)
+                    return
+        except Exception as stream_error:
+            logger.exception("Streaming failed")
+            run_error = RunErrorEvent(
+                message="An internal error has occurred while streaming events.",
+                code=type(stream_error).__name__,
+            )
+            yield encoder.encode(run_error)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ── Synchronous Invoke Endpoint (for M365 CEA bot relay) ─────────────────────

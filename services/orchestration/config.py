@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # App Settings
     demo_mode: bool = Field(default=True, alias="DEMO_MODE")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
-    cors_origins: str = Field(default="http://localhost:5173,http://localhost:3000", alias="CORS_ORIGINS")
+    cors_origins: str = Field(default="http://localhost:5173,http://localhost:5174,http://localhost:3000", alias="CORS_ORIGINS")
 
     model_config = {"env_file": str(_ENV_FILE), "extra": "ignore"}
 
