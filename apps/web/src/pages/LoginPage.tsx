@@ -8,11 +8,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
+  const validUsers: Record<string, { password: string; displayName: string }> = {
+    'Sanjeev Nair': { password: 'demo123', displayName: 'Sanjeev Nair' },
+    'sarah@zava.com': { password: 'demo123', displayName: 'Sarah Chen' },
+  };
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (username === 'Sanjeev Nair' && password === 'demo123') {
+    const user = validUsers[username];
+    if (user && password === user.password) {
       sessionStorage.setItem('hr-concierge-auth', 'true');
-      sessionStorage.setItem('hr-concierge-user', username);
+      sessionStorage.setItem('hr-concierge-user', user.displayName);
       navigate('/');
     } else {
       setError('Invalid username or password');

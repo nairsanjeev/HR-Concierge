@@ -255,7 +255,9 @@ All three services are deployed as Azure Container Apps in resource group `rg-hr
 | Web Frontend | `https://<your-web-app>.azurecontainerapps.io` | `<your-acr>.azurecr.io/hr-concierge-web:v3` |
 | MCP Server | `https://<your-mcp-app>.azurecontainerapps.io` | `<your-acr>.azurecr.io/hr-concierge-mcp:v1` |
 
-**Login credentials:** Sanjeev Nair / demo123
+**Login credentials:**
+- Sanjeev Nair / demo123
+- sarah@zava.com / demo123 (Sarah Chen)
 
 ---
 

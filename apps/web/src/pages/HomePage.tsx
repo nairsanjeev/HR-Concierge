@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Heart, Shield, Sparkles, ArrowRight, Sun, Moon, Network,
-  Bot, FileCheck, ChevronRight, Zap,
+  Bot, FileCheck, ChevronRight, Zap, LayoutDashboard, BookOpen,
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 
@@ -65,6 +65,18 @@ export default function HomePage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/architecture')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-[var(--surface-2)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              <LayoutDashboard className="w-4 h-4" /> Architecture
+            </button>
+            <button
+              onClick={() => navigate('/demo-script')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-[var(--surface-2)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              <BookOpen className="w-4 h-4" /> Demo Script
+            </button>
             <button onClick={toggle} className="p-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors">
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>

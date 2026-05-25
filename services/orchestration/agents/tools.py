@@ -47,16 +47,15 @@ def query_knowledge_base(query: str) -> str:
     if not settings.azure_search_endpoint or not settings.azure_search_api_key:
         return json.dumps({"answer": None, "error": "Knowledge base not configured"})
 
-    index_name = settings.azure_search_knowledge_base
     url = (
-        f"{settings.azure_search_endpoint}/indexes/"
-        f"{index_name}/docs/search"
-        f"?api-version=2024-07-01"
+        f"{settings.azure_search_endpoint}/knowledgebases/"
+        f"{settings.azure_search_knowledge_base}/retrieve"
+        f"?api-version=2025-11-01-preview"
     )
     body = {
-        "search": query,
-        "top": 5,
-        "select": "snippet,doc_url",
+        "messages": [
+            {"role": "user", "content": [{"type": "text", "text": query}]}
+        ],
     }
     headers = {
         "Content-Type": "application/json",
@@ -78,16 +77,13 @@ def query_knowledge_base(query: str) -> str:
         else:
             data = asyncio.run(_call())
 
-        results = data.get("value", [])
-        if results:
-            snippets = []
-            for doc in results:
-                snippet = doc.get("snippet", "")
-                if snippet:
-                    snippets.append(snippet)
-            if snippets:
-                combined = "\n\n---\n\n".join(snippets)
-                return json.dumps({"answer": combined, "source": "SharePoint HR Policy Knowledge Base"})
+        response_msgs = data.get("response", [])
+        if response_msgs:
+            content_parts = response_msgs[0].get("content", [])
+            if content_parts:
+                answer = content_parts[0].get("text", "")
+                if answer:
+                    return json.dumps({"answer": answer, "source": "SharePoint HR Policy Knowledge Base"})
     except Exception as e:
         logger.warning(f"Knowledge base query failed: {e}")
 

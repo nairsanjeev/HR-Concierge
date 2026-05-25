@@ -1,0 +1,6 @@
+defaultEnvironment: dev
+environments:
+  dev:
+    projectEndpoint: "https://ai-account-s42vgahbtyhmq.services.ai.azure.com/api/projects/ai-project-hr-concierge-hosted"
+    agentName: "hr-concierge"
+    azureContainerRegistry: "crs42vgahbtyhmq.azurecr.io"
