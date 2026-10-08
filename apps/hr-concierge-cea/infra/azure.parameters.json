@@ -6,7 +6,7 @@
       "value": "bot${{RESOURCE_SUFFIX}}"
     },
     "webAppSKU": {
-      "value": "F1"
+      "value": "B1"
     },
     "botDisplayName": {
       "value": "HR Concierge"
